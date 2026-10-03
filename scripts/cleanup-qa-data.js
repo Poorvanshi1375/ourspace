@@ -23,7 +23,7 @@ const { initializeApp, cert, applicationDefault } = require("firebase-admin/app"
 const { getAuth } = require("firebase-admin/auth");
 const { getFirestore } = require("firebase-admin/firestore");
 
-const PROJECT_ID = "ourspace-dev";
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "ourspace-dev";
 const QA_EMAIL = /^qa\.[ab]\.\d+@example\.com$/;
 const APPLY = process.argv.includes("--yes");
 

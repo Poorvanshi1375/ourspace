@@ -1,7 +1,7 @@
 // src/utils/cloudinary.js
 
-const CLOUD_NAME = "dgsrn1cpr";
-const UPLOAD_PRESET = "ourspace_unsigned";
+const CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
 
 /* Our memory type, decided from the file itself (Cloudinary reports PDFs as "image") */
 export const getMediaType = (file) => {

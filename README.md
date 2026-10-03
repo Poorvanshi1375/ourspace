@@ -1,70 +1,65 @@
-# Getting Started with Create React App
+# OurSpace
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A digital scrapbook that feels handmade — polaroids, handwritten notes, washi tape, stickers and
+sealed letters — made to be gifted to the people you love.
 
-## Available Scripts
+Friends share a private **space**. Inside it they keep memories day by day, write letters that can
+stay sealed until a date, and chat. The next version turns this into **books** you design spread by
+spread and send as a gift link that opens like a real envelope.
 
-In the project directory, you can run:
+## Status
 
-### `npm start`
+| Phase | What | State |
+| --- | --- | --- |
+| 0 | Bug fixes, security rules, test tooling | Done |
+| 1 | New data model: books → spreads → elements | Next |
+| 2 | Redesigned screens (pistachio + off-white, handwritten type) | Planned |
+| 3 | Gift viewer: no-login link, envelope opening, time capsule | Planned |
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Tech
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- React 19 (Create React App), React Router 7
+- Firebase Authentication (email + Google) and Cloud Firestore
+- Cloudinary for photo, video and document uploads
+- interact.js for dragging items on the scrapbook canvas
 
-### `npm test`
+## Run it locally
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```bash
+npm install
+cp .env.example .env.local   # then fill in your Firebase and Cloudinary values
+npm start                    # http://localhost:3000
+```
 
-### `npm run build`
+`.env.local` is git-ignored. Restart `npm start` after changing it.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Firebase
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- Security rules: [`firestore.rules`](firestore.rules) — only members of a space can read or write
+  it, private drafts are readable only by their author, and joining a space can only add yourself.
+- Indexes: [`firestore.indexes.json`](firestore.indexes.json)
+- Deploy both: `npx firebase-tools deploy --only firestore`
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The Firebase web API key is public by design; access to data is controlled by the rules above, and
+the key is restricted to the app's own domains and to the Auth and Firestore APIs.
 
-### `npm run eject`
+## Checks and scripts
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+| Command | What it does |
+| --- | --- |
+| `npm run e2e` | Drives the real app in headless Chrome: sign-up, spaces, scrapbook drag/rotate/delete, shared letters vs private drafts. Needs the dev server running. Screenshots go to `e2e-output/`. |
+| `npm run cleanup:qa` | Lists the test accounts the e2e run created and their data. Add `-- --yes` to delete them. Needs a Firebase service account key saved as `serviceAccountKey.json` (git-ignored). |
+| `npm run build` | Production build into `build/`. |
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Project layout
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```
+src/
+  auth.js          login state, current profile, active space
+  firebase.js      Firebase setup (reads .env.local)
+  pages/           one file per screen
+  components/      scrapbook menu, chat, add-item modals
+  utils/           uploads (cloudinary.js), space and date helpers (space.js)
+scripts/           e2e check and test-data cleanup
+firestore.rules    database security rules
+```

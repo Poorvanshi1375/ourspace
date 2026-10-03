@@ -4,19 +4,25 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-// TODO: replace with *your* firebaseConfig
+// Values come from .env.local (see .env.example). The web API key is public by
+// design; access is controlled by firestore.rules and the key's restrictions.
 const firebaseConfig = {
-  apiKey: "AIzaSyAowhGjwyIKTIs9VcRJSSIQy7yFELmcOkg",
-  authDomain: "ourspace-dev.firebaseapp.com",
-  projectId: "ourspace-dev",
-  storageBucket: "ourspace-dev.appspot.com",
-  messagingSenderId: "619219833536",
-  appId: "1:619219833536:web:f84f5410395650a954d325",
-  measurementId: "G-XMG7L5GM6W"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
 };
+
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  throw new Error(
+    "Firebase config missing: copy .env.example to .env.local, fill it in, and restart `npm start`."
+  );
+}
 
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);     
+export const storage = getStorage(app);
