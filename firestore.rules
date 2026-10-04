@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function spaceDoc(code) {
+      return get(/databases/$(database)/documents/spaces/$(code));
+    }
+
+    function isMember(code) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/spaces/$(code))
+        && request.auth.uid in spaceDoc(code).data.userIds;
+    }
+
+    // ---------- Users: only your own profile ----------
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ---------- Spaces ----------
+    match /spaces/{code} {
+      // Reading one space by its code is how joining works; listing all spaces is not allowed
+      allow get: if signedIn();
+      allow list: if false;
+
+      allow create: if signedIn()
+        && request.resource.data.userIds == [request.auth.uid];
+
+      // Joining: you may only add yourself, nothing else changes, and the member limit holds
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userIds'])
+        && request.resource.data.userIds.toSet().difference(resource.data.userIds.toSet())
+             == [request.auth.uid].toSet()
+        && resource.data.userIds.toSet().difference(request.resource.data.userIds.toSet()).size() == 0
+        && request.resource.data.userIds.size() <= resource.data.maxMembers;
+
+      allow delete: if false;
+    }
+
+    // ---------- Memories (scrapbook items) ----------
+    match /memory_posts/{id} {
+      allow read: if isMember(resource.data.spaceCode);
+      allow create: if isMember(request.resource.data.spaceCode);
+      allow update: if isMember(resource.data.spaceCode)
+        && request.resource.data.spaceCode == resource.data.spaceCode;
+      // Deleting is a soft delete (is_deleted: true)
+      allow delete: if false;
+    }
+
+    // ---------- Letters ----------
+    match /notes/{id} {
+      // Shared letters: everyone in the space. Drafts: only the author.
+      allow read: if isMember(resource.data.spaceCode)
+        && (resource.data.is_shared == true || resource.data.author_id == request.auth.uid);
+
+      allow create: if isMember(request.resource.data.spaceCode)
+        && request.resource.data.author_id == request.auth.uid;
+
+      // The author can edit; any member can soft-delete a shared letter (from the scrapbook)
+      allow update: if isMember(resource.data.spaceCode)
+        && request.resource.data.spaceCode == resource.data.spaceCode
+        && request.resource.data.author_id == resource.data.author_id
+        && (
+          resource.data.author_id == request.auth.uid
+          || (resource.data.is_shared == true
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['is_deleted', 'updated_at']))
+        );
+
+      allow delete: if false;
+    }
+
+    // ---------- Chat ----------
+    match /scrapbook_chat/{code}/messages/{messageId} {
+      allow read: if isMember(code);
+      allow create: if isMember(code) && request.resource.data.sender == request.auth.uid;
+      allow delete: if isMember(code) && resource.data.sender == request.auth.uid;
+    }
+  }
+}
