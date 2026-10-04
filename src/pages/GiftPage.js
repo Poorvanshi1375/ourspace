@@ -30,7 +30,7 @@ function Sprig({ flip }) {
   );
 }
 
-function PackingSlip({ counts = {}, song }) {
+function PackingSlip({ counts = {}, song, narrow }) {
   const rows = [
     counts.spreads && `${counts.spreads} handmade spread${counts.spreads === 1 ? "" : "s"}`,
     counts.photos && `${counts.photos} polaroid${counts.photos === 1 ? "" : "s"} of us`,
@@ -40,7 +40,7 @@ function PackingSlip({ counts = {}, song }) {
     song?.title && "1 song, picked for you",
   ].filter(Boolean);
   return (
-    <aside aria-label="What's inside" style={{ flex: "0 0 270px", position: "relative", transform: "rotate(-2deg)" }}>
+    <aside aria-label="What's inside" style={{ flex: narrow ? "0 1 auto" : "0 0 270px", width: narrow ? "min(340px, 100%)" : undefined, position: "relative", transform: "rotate(-2deg)" }}>
       <span className="ui-tape" style={{ width: 90, left: 90, top: -12, transform: "rotate(3deg)", zIndex: 1 }} />
       <div style={{ background: "var(--paper)", borderRadius: 4, boxShadow: "0 14px 28px rgba(43,48,38,.12), 0 2px 4px rgba(43,48,38,.06)", padding: "30px 24px 22px" }}>
         <div style={{ fontSize: 11, letterSpacing: ".2em", fontWeight: 700 }} className="muted">PACKING SLIP</div>
@@ -66,9 +66,9 @@ function PackingSlip({ counts = {}, song }) {
   );
 }
 
-function NoteCard({ note, from }) {
+function NoteCard({ note, from, narrow }) {
   return (
-    <aside aria-label="A note before you open" style={{ flex: "0 0 270px", position: "relative", transform: "rotate(2deg)" }}>
+    <aside aria-label="A note before you open" style={{ flex: narrow ? "0 1 auto" : "0 0 270px", width: narrow ? "min(340px, 100%)" : undefined, position: "relative", transform: "rotate(2deg)" }}>
       <svg aria-hidden="true" style={{ position: "absolute", left: 30, top: -18, zIndex: 1 }} width="22" height="52" viewBox="0 0 22 52">
         <path d="M7 14 V40 a4 4 0 0 0 8 0 V8 a6 6 0 0 0 -12 0 V38" fill="none" stroke="#8A9283" strokeWidth="2.4" strokeLinecap="round" />
       </svg>
@@ -83,10 +83,11 @@ function NoteCard({ note, from }) {
   );
 }
 
-function Envelope({ to, from, forLine, initials, onSeal, sealDisabled }) {
+/* drawn at 760x470 and scaled to fit (0.921 on a laptop, the screen width on a phone) */
+function Envelope({ to, from, forLine, initials, onSeal, sealDisabled, scale = 0.921 }) {
   return (
-    <div style={{ flex: "0 0 700px", maxWidth: "100%", height: 433, position: "relative" }}>
-      <div style={{ position: "absolute", left: 0, top: 0, width: 760, height: 470, transform: "scale(.921)", transformOrigin: "top left" }}>
+    <div style={{ flex: "none", width: 760 * scale, height: 470 * scale, position: "relative" }}>
+      <div style={{ position: "absolute", left: 0, top: 0, width: 760, height: 470, transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <div style={{ position: "absolute", inset: 0, transform: "rotate(-1deg)" }}>
           <div style={{ position: "absolute", inset: 0, background: "#FAF8F3", borderRadius: 10, boxShadow: "0 34px 60px rgba(43,48,38,.20), 0 4px 10px rgba(43,48,38,.10)", overflow: "hidden" }}>
             <svg style={{ position: "absolute", left: 0, top: 0 }} width="760" height="470" viewBox="0 0 760 470" aria-hidden="true">
@@ -142,18 +143,20 @@ function Envelope({ to, from, forLine, initials, onSeal, sealDisabled }) {
   );
 }
 
-function Story({ story = [] }) {
+function Story({ story = [], narrow }) {
   if (!story.length) return null;
   return (
-    <section aria-label="Our little story so far" style={{ width: "100%", maxWidth: 1100, marginTop: 40, background: "rgba(236,240,228,.75)", borderRadius: 24, padding: "20px 34px 22px", boxSizing: "border-box" }}>
+    <section aria-label="Our little story so far" style={{ width: "100%", maxWidth: 1100, marginTop: 40, background: "rgba(236,240,228,.75)", borderRadius: 24, padding: narrow ? "18px 16px 20px" : "20px 34px 22px", boxSizing: "border-box" }}>
       <div className="muted" style={{ textAlign: "center", fontSize: 11, letterSpacing: ".22em", fontWeight: 700 }}>OUR LITTLE STORY SO FAR</div>
       <div style={{ position: "relative", marginTop: 10 }}>
-        <div aria-hidden="true" style={{ position: "absolute", left: "10%", right: "10%", top: 13, borderTop: "2.5px dashed var(--pistachio-400)" }} />
-        <ol style={{ position: "relative", listStyle: "none", margin: 0, padding: 0, display: "flex", gap: 12 }}>
+        <div aria-hidden="true" style={narrow
+          ? { position: "absolute", left: "50%", top: 13, bottom: 20, borderLeft: "2.5px dashed var(--pistachio-400)" }
+          : { position: "absolute", left: "10%", right: "10%", top: 13, borderTop: "2.5px dashed var(--pistachio-400)" }} />
+        <ol style={{ position: "relative", listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: narrow ? "column" : "row", gap: narrow ? 18 : 12 }}>
           {story.map((s, i) => {
             const last = i === story.length - 1;
             return (
-              <li key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", flex: 1, minWidth: 0 }}>
+              <li key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", flex: 1, minWidth: 0, background: narrow ? "rgba(236,240,228,.95)" : "transparent", position: "relative" }}>
                 <span style={{ height: 26, display: "flex", alignItems: "center" }}>
                   <span style={last
                     ? { display: "block", width: 22, height: 22, borderRadius: 999, background: "var(--pistachio-700)", boxShadow: "0 0 0 6px rgba(132,176,103,.25)" }
@@ -177,6 +180,7 @@ export default function GiftPage() {
   const [state, setState] = useState({ loading: true });
   const [stage, setStage] = useState("envelope"); // envelope | cover | read
   const [index, setIndex] = useState(0);
+  const [side, setSide] = useState("left"); // phones show one page of the spread at a time
   const [elements, setElements] = useState({});
   const [letter, setLetter] = useState(null);
   const [muted, setMuted] = useState(false);
@@ -258,14 +262,37 @@ export default function GiftPage() {
     setStage("cover");
   };
 
+  const narrow = view.w < 760; // a phone, or a very narrow window
   // the open book fits the window (room above for the title, below for the controls)
-  const pw = Math.max(260, Math.min(560, (view.w - 200) / 2, ((view.h - 260) * PAGE.width) / PAGE.height));
+  const pw = narrow
+    ? Math.min(560, view.w - 32)
+    : Math.max(260, Math.min(560, (view.w - 200) / 2, ((view.h - 260) * PAGE.width) / PAGE.height));
+  const envScale = narrow ? Math.min(0.921, (view.w - 32) / 760) : 0.921;
+  const coverW = Math.min(420, view.w * 0.86);
+
+  // page turning: whole spreads on a laptop, single pages on a phone
+  const atStart = index === 0 && (!narrow || side === "left");
+  const atEnd = index >= spreads.length - 1 && (!narrow || side === "right");
+  const goPrev = () => {
+    if (narrow && side === "right") return setSide("left");
+    if (index > 0) {
+      setIndex((i) => i - 1);
+      setSide("right");
+    }
+  };
+  const goNext = () => {
+    if (narrow && side === "left") return setSide("right");
+    if (index < spreads.length - 1) {
+      setIndex((i) => i + 1);
+      setSide("left");
+    }
+  };
 
   return (
     <div className="ui-root" style={{ position: "relative", overflowX: "hidden" }}>
       {gift.song?.audioUrl && <audio ref={audio} src={gift.song.audioUrl} loop muted={muted} preload="auto" />}
       {gift.song?.title && (
-        <div style={{ position: "absolute", top: 24, right: 24, display: "flex", alignItems: "center", gap: 12, background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 999, padding: "6px 8px 6px 18px", boxShadow: "0 4px 12px rgba(43,48,38,.06)", whiteSpace: "nowrap", zIndex: 3 }}>
+        <div style={{ ...(narrow ? { position: "relative", margin: "14px auto 0", width: "fit-content", maxWidth: "calc(100% - 32px)" } : { position: "absolute", top: 24, right: 24, whiteSpace: "nowrap" }), display: "flex", alignItems: "center", gap: 12, background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 999, padding: "6px 8px 6px 18px", boxShadow: "0 4px 12px rgba(43,48,38,.06)", zIndex: 3 }}>
           <span style={{ fontSize: 14 }}>
             {stage !== "envelope" && gift.song.audioUrl && !muted ? "Playing " : "Song: "}<b>{gift.song.title}</b>{gift.song.artist ? ` · ${gift.song.artist}` : ""}
           </span>
@@ -281,25 +308,33 @@ export default function GiftPage() {
       )}
 
       {stage === "envelope" && (
-        <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: "90px 24px 56px", boxSizing: "border-box", background: "radial-gradient(ellipse at 50% 52%, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 60%)" }}>
+        <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: narrow ? "24px 16px 40px" : "90px 24px 56px", boxSizing: "border-box", background: "radial-gradient(ellipse at 50% 52%, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 60%)" }}>
           <div style={{ textAlign: "center", marginBottom: 40, display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div className="ribbon" style={{ display: "inline-flex", alignItems: "center", height: 36, padding: "0 40px", background: "var(--pistachio-100)", color: "var(--pistachio-900)", fontSize: 12, letterSpacing: ".22em", fontWeight: 700, clipPath: "polygon(0 0,100% 0,calc(100% - 14px) 50%,100% 100%,0 100%,14px 50%)" }}>
+            <div className="ribbon" style={{ display: "inline-flex", alignItems: "center", height: 36, padding: narrow ? "0 26px" : "0 40px", background: "var(--pistachio-100)", color: "var(--pistachio-900)", fontSize: narrow ? 10 : 12, letterSpacing: narrow ? ".12em" : ".22em", fontWeight: 700, clipPath: "polygon(0 0,100% 0,calc(100% - 14px) 50%,100% 100%,0 100%,14px 50%)" }}>
               {fmtDay(ribbonDate)} · SENT WITH LOVE
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 18 }}>
-              <Sprig />
+              {!narrow && <Sprig />}
               <h1 className="font-hand" style={{ margin: 0, fontSize: "clamp(34px, 4vw, 58px)", fontWeight: 700, lineHeight: 1 }}>
                 {heading} <span style={{ color: "var(--pistachio-700)" }}>♡</span>
               </h1>
-              <Sprig flip />
+              {!narrow && <Sprig flip />}
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 44, width: "100%", maxWidth: 1360, flexWrap: "wrap" }}>
-            <PackingSlip counts={gift.counts} song={gift.song} />
-            <Envelope to={to} from={from} forLine={gift.forLine} initials={initials} onSeal={breakSeal} sealDisabled={locked} />
-            <NoteCard note={gift.note} from={from} />
-          </div>
+          {narrow ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 30, width: "100%" }}>
+              <Envelope to={to} from={from} forLine={gift.forLine} initials={initials} onSeal={breakSeal} sealDisabled={locked} scale={envScale} />
+              <NoteCard note={gift.note} from={from} narrow />
+              <PackingSlip counts={gift.counts} song={gift.song} narrow />
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 44, width: "100%", maxWidth: 1360, flexWrap: "wrap" }}>
+              <PackingSlip counts={gift.counts} song={gift.song} />
+              <Envelope to={to} from={from} forLine={gift.forLine} initials={initials} onSeal={breakSeal} sealDisabled={locked} />
+              <NoteCard note={gift.note} from={from} />
+            </div>
+          )}
 
           {locked && unlockAt ? (
             <div role="status" style={{ marginTop: 48, textAlign: "center" }}>
@@ -315,19 +350,19 @@ export default function GiftPage() {
             </div>
           ) : (
             <>
-              <p className="font-hand" style={{ margin: "56px 0 0", fontSize: 30, color: "var(--pistachio-800)" }}>tap the seal to open ✦</p>
+              <p className="font-hand" style={{ margin: narrow ? "30px 0 0" : "56px 0 0", fontSize: 30, color: "var(--pistachio-800)", textAlign: "center" }}>tap the seal to open ✦</p>
               {gift.song?.audioUrl && <p className="muted" style={{ margin: "4px 0 0", fontSize: 14 }}>{from || "Someone"} picked a song for this moment — turn your sound on</p>}
             </>
           )}
 
-          <Story story={gift.story} />
+          <Story story={gift.story} narrow={narrow} />
         </main>
       )}
 
       {stage === "cover" && (
         <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, boxSizing: "border-box" }}>
           <p className="font-hand" style={{ margin: "0 0 22px", fontSize: 30, color: "var(--pistachio-800)" }}>something made just for you…</p>
-          <div style={{ position: "relative", width: 420, maxWidth: "90vw", height: 540, transform: "rotate(-1.5deg)" }}>
+          <div style={{ position: "relative", width: coverW, height: (coverW * 540) / 420, transform: "rotate(-1.5deg)" }}>
             <span aria-hidden="true" style={{ position: "absolute", right: -10, top: 12, bottom: 8, width: 16, borderRadius: "0 5px 5px 0", background: "repeating-linear-gradient(to bottom,#fff 0 2px,#E7E4DE 2px 3px)" }} />
             <div style={{ position: "absolute", inset: "0 6px 0 0", backgroundColor: "#D7E5C6", backgroundImage: "repeating-linear-gradient(45deg,rgba(255,255,255,.22) 0 1px,transparent 1px 4px)", borderRadius: "8px 14px 14px 8px", boxShadow: "0 30px 50px rgba(43,48,38,.22)" }}>
               <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 38, background: "#3B5C2C", borderRadius: "8px 0 0 8px" }}>
@@ -349,23 +384,39 @@ export default function GiftPage() {
       )}
 
       {stage === "read" && spread && (
-        <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 24px 40px", boxSizing: "border-box" }}>
-          <h1 className="font-title" style={{ margin: "0 0 24px", fontSize: 30 }}>{spread.title}</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <button className="ui-icon-btn" aria-label="Previous pages" disabled={index === 0} onClick={() => setIndex((i) => i - 1)} style={{ width: 48, height: 48, borderRadius: 999, border: "1px solid var(--line)", background: "var(--paper)" }}>
-              <IconPrev size={20} />
-            </button>
-            <div key={spread.id} className="gift-turn">
+        <main style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: narrow ? "20px 16px 32px" : "80px 24px 40px", boxSizing: "border-box" }}>
+          <h1 className="font-title" style={{ margin: "0 0 18px", fontSize: narrow ? 24 : 30, textAlign: "center" }}>{spread.title}</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 20, justifyContent: "center" }}>
+            {!narrow && (
+              <button className="ui-icon-btn" aria-label="Previous pages" disabled={atStart} onClick={goPrev} style={{ width: 48, height: 48, borderRadius: 999, border: "1px solid var(--line)", background: "var(--paper)" }}>
+                <IconPrev size={20} />
+              </button>
+            )}
+            <div key={`${spread.id}-${narrow ? side : "both"}`} className="gift-turn">
               {elements[spread.id] ? (
-                <BookSpread elements={elements[spread.id]} pageWidth={pw} pageNumber={index * 2 + 1} onOpenLetter={setLetter} />
+                <BookSpread
+                  elements={elements[spread.id]}
+                  pageWidth={pw}
+                  pageNumber={index * 2 + (narrow && side === "right" ? 2 : 1)}
+                  onOpenLetter={setLetter}
+                  only={narrow ? side : null}
+                />
               ) : (
-                <div style={{ width: pw * 2, height: (pw * PAGE.height) / PAGE.width, display: "grid", placeItems: "center" }} className="muted">turning the page…</div>
+                <div style={{ width: narrow ? pw : pw * 2, height: (pw * PAGE.height) / PAGE.width, display: "grid", placeItems: "center" }} className="muted">turning the page…</div>
               )}
             </div>
-            <button className="ui-icon-btn" aria-label="Next pages" disabled={index >= spreads.length - 1} onClick={() => setIndex((i) => i + 1)} style={{ width: 48, height: 48, borderRadius: 999, border: "1px solid var(--line)", background: "var(--paper)" }}>
-              <IconNext size={20} />
-            </button>
+            {!narrow && (
+              <button className="ui-icon-btn" aria-label="Next pages" disabled={atEnd} onClick={goNext} style={{ width: 48, height: 48, borderRadius: 999, border: "1px solid var(--line)", background: "var(--paper)" }}>
+                <IconNext size={20} />
+              </button>
+            )}
           </div>
+          {narrow && (
+            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+              <button className="ui-btn ui-btn-outline" aria-label="Previous page" disabled={atStart} onClick={goPrev}><IconPrev size={16} /> Back</button>
+              <button className="ui-btn ui-btn-primary" aria-label="Next page" disabled={atEnd} onClick={goNext}>Next page <IconNext size={16} /></button>
+            </div>
+          )}
 
           <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 28, flexWrap: "wrap", justifyContent: "center" }}>
             <div style={{ display: "flex", gap: 8 }} aria-label={`Spread ${index + 1} of ${spreads.length}`}>
@@ -404,12 +455,12 @@ export default function GiftPage() {
                       setReply((r) => ({ ...r, busy: false, error: "Couldn't send. Try again?" }));
                     }
                   }}
-                  style={{ display: "flex", alignItems: "center", gap: 10, background: "#E9F1DD", padding: "8px 8px 8px 18px", borderRadius: 6, transform: "rotate(-1deg)", boxShadow: "0 6px 14px rgba(43,48,38,.1)" }}
+                  style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: narrow ? "wrap" : "nowrap", width: narrow ? "100%" : "auto", boxSizing: "border-box", background: "#E9F1DD", padding: "8px 8px 8px 18px", borderRadius: 6, transform: "rotate(-1deg)", boxShadow: "0 6px 14px rgba(43,48,38,.1)" }}
                 >
                   <label htmlFor="gift-reply" className="font-hand" style={{ fontSize: 22, fontWeight: 700, whiteSpace: "nowrap" }}>
                     {reply.sent ? "stuck ♡ write another?" : `a note for ${from || "them"}:`}
                   </label>
-                  <input id="gift-reply" value={reply.text} maxLength={500} onChange={(e) => setReply((r) => ({ ...r, text: e.target.value, sent: false }))} placeholder="I cried at this one…" className="font-hand" style={{ width: 240, border: "none", background: "transparent", fontSize: 22, outline: "none", borderBottom: "1.5px dashed var(--pistachio-400)", padding: "4px 2px" }} />
+                  <input id="gift-reply" value={reply.text} maxLength={500} onChange={(e) => setReply((r) => ({ ...r, text: e.target.value, sent: false }))} placeholder="I cried at this one…" className="font-hand" style={{ width: narrow ? "100%" : 240, flex: narrow ? "1 1 100%" : "none", border: "none", background: "transparent", fontSize: 22, outline: "none", borderBottom: "1.5px dashed var(--pistachio-400)", padding: "4px 2px" }} />
                   <button type="submit" className="ui-btn ui-btn-primary" style={{ minHeight: 36, padding: "8px 16px" }} disabled={reply.busy}>Stick it</button>
                   {reply.error && <span role="alert" style={{ color: "#a23b2c", fontSize: 13 }}>{reply.error}</span>}
                 </form>
@@ -439,7 +490,7 @@ export default function GiftPage() {
               </section>
             );
           })()}
-          <button onClick={() => { setStage("envelope"); setIndex(0); }} style={{ marginTop: 22, border: "none", background: "transparent", fontSize: 13, color: "var(--ink-muted)", cursor: "pointer", textDecoration: "underline" }}>
+          <button onClick={() => { setStage("envelope"); setIndex(0); setSide("left"); }} style={{ marginTop: 22, border: "none", background: "transparent", fontSize: 13, color: "var(--ink-muted)", cursor: "pointer", textDecoration: "underline" }}>
             Replay the opening
           </button>
         </main>
