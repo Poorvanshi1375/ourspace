@@ -88,6 +88,12 @@ async function deleteQuery(q, label) {
     console.log(`\n  Space ${code}`);
     await deleteQuery(db.collection("memory_posts").where("spaceCode", "==", code), "memories");
     await deleteQuery(db.collection("notes").where("spaceCode", "==", code), "letters");
+    await deleteQuery(db.collection("gifts").where("spaceCode", "==", code), "gift links");
+
+    // books, with their spreads, elements and replies
+    const books = await db.collection("books").where("spaceCode", "==", code).get();
+    if (APPLY) for (const b of books.docs) await db.recursiveDelete(b.ref);
+    console.log(`  books (with spreads, elements, replies): ${books.size}`);
 
     const chatRef = db.collection("scrapbook_chat").doc(code);
     const chatCount = (await chatRef.collection("messages").count().get()).data().count;
