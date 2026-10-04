@@ -5,7 +5,7 @@ import { Logo } from "./icons";
 import "./ui.css";
 
 const NAV = [
-  { to: "/dashboard", label: "My Space" },
+  { to: "/home", label: "My Space" },
   { to: "/books", label: "Books" },
   { to: "/notes", label: "Letters" },
 ];
@@ -15,7 +15,7 @@ export default function AppShell({ children }) {
     <div className="ui-root">
       <header className="ui-nav">
         <div className="ui-nav-inner">
-          <Link to="/books" className="ui-logo">
+          <Link to="/home" className="ui-logo">
             <Logo />
             <span>OurSpace</span>
           </Link>

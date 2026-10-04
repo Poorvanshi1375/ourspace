@@ -43,7 +43,7 @@ const check = (c, n, d) => (c ? pass(n, d) : fail(n, d));
     await page.waitForURL("**/space", { timeout: 20000 });
     await page.click("text=+ Create New Space");
     await page.click("text=Create Our Space");
-    await page.waitForURL("**/dashboard", { timeout: 20000 });
+    await page.waitForURL("**/home", { timeout: 20000 });
     await page.goto(`${BASE}/space`);
     const code = (await page.locator("text=Space Code:").first().locator("..").innerText()).replace("Space Code:", "").trim();
 
@@ -60,6 +60,19 @@ const check = (c, n, d) => (c ? pass(n, d) : fail(n, d));
       return { bookId, spreadId, photo, note };
     }, { code, img: `${BASE}/logo512.png` });
     pass("Test book created", ids.bookId);
+
+    // ---- new home ----
+    await page.goto(`${BASE}/home`);
+    await page.locator("h1:has-text('Hi QA')").waitFor({ timeout: 15000 });
+    await page.locator(`[data-book="${ids.bookId}"]`).waitFor({ timeout: 15000 });
+    await page.locator("text=A MEMORY").waitFor({ timeout: 20000 });
+    await page.waitForTimeout(1000);
+    check((await page.locator("text=diet coke girlies").count()) >= 1, "Home shows greeting, shelf and a memory polaroid from the book");
+    check((await page.locator("text=Continue QA Mumbai book").count()) === 1, "Home offers to continue the last edited book");
+    await shot("0-home");
+    await page.click("text=open this spread");
+    await page.locator('[data-testid="spread"]').waitFor({ timeout: 15000 });
+    pass("Memory links straight to its spread in the editor");
 
     // ---- shelf ----
     await page.goto(`${BASE}/books`);

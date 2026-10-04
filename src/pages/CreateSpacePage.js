@@ -94,7 +94,7 @@ export default function CreateSpacePage() {
       );
 
       /* 5️⃣ Success */
-      navigate("/dashboard");
+      navigate("/app");
     } catch (err) {
       console.error("Create space setup failed:", err);
       setError("Space created, but setup failed. Please refresh.");

@@ -23,6 +23,7 @@ import CameraPage from "./pages/CameraPage";
 import NewMemoryPage from "./pages/NewMemoryPage";
 import UploadMemoryPage from "./pages/UploadMemoryPage";
 import BooksPage from "./pages/BooksPage";
+import MySpacePage from "./pages/MySpacePage";
 import SpreadEditorPage from "./pages/SpreadEditorPage";
 
 // ✅ NEW
@@ -51,7 +52,7 @@ function SpaceGate() {
     return <Navigate to="/space" replace />;
   }
 
-  return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/home" replace />;
 }
 
 export default function App() {
@@ -195,6 +196,16 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <UploadMemoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* New home (redesign) */}
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <MySpacePage />
               </ProtectedRoute>
             }
           />

@@ -67,8 +67,8 @@ async function openDayFromDashboard(page) {
     await a.click("text=+ Create New Space");
     await a.waitForURL("**/space/create");
     await a.click("text=Create Our Space");
-    await a.waitForURL("**/dashboard", { timeout: 20000 });
-    pass("A creates a space and lands on dashboard");
+    await a.waitForURL("**/home", { timeout: 20000 });
+    pass("A creates a space and lands on the new home");
 
     await a.goto(`${BASE}/space`);
     const codeText = await a.locator("text=Space Code:").first().locator("..").innerText();
@@ -83,10 +83,10 @@ async function openDayFromDashboard(page) {
     await a.fill('input[name="password"]', A.pass);
     await a.click('button[type="submit"]');
     try {
-      await a.waitForURL("**/dashboard", { timeout: 20000 });
-      pass("T1 login lands on dashboard", a.url());
+      await a.waitForURL("**/home", { timeout: 20000 });
+      pass("T1 login lands on the new home", a.url());
     } catch {
-      fail("T1 login lands on dashboard", a.url());
+      fail("T1 login lands on the new home", a.url());
     }
     await shot(a, "t1-dashboard");
 
@@ -184,9 +184,10 @@ async function openDayFromDashboard(page) {
     await b.waitForURL("**/space/join");
     await b.fill('input[placeholder="Enter space code"]', spaceCode);
     await b.click("button:has-text('Join Space')");
-    await b.waitForURL("**/dashboard", { timeout: 20000 });
+    await b.waitForURL("**/home", { timeout: 20000 });
     pass("B joins A's space");
 
+    await b.goto(`${BASE}/dashboard`);
     await openDayFromDashboard(b);
     await b.click("text=📚 Letters & notes");
     await b.waitForURL("**/notes");
