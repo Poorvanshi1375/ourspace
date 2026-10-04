@@ -22,7 +22,7 @@ const check = (c, n, d) => (c ? pass(n, d) : fail(n, d));
 (async () => {
   const errors = [];
   const browser = await chromium.launch({ channel: "chrome", headless: true });
-  const page = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
+  const page = await (await browser.newContext({ viewport: process.env.VIEWPORT ? { width: +process.env.VIEWPORT.split("x")[0], height: +process.env.VIEWPORT.split("x")[1] } : { width: 1440, height: 1000 } })).newPage();
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(`pageerror ${e.message}`));
   const shot = (name) => page.screenshot({ path: path.join(SHOTS, `editor-${name}.png`) });
