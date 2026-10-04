@@ -94,7 +94,7 @@ export default function SpreadEditorPage() {
   }, []);
 
   const byWidth = (stage.w - GUTTER * 2) / 2;
-  const byHeight = ((stage.h - 40) * M.PAGE.width) / M.PAGE.height; // 40 = breathing room below the book
+  const byHeight = ((stage.h - 14) * M.PAGE.width) / M.PAGE.height; // the book fills the height, edge to edge
   const pw = Math.max(240, Math.min(M.PAGE.width, byWidth, byHeight));
   const ph = (pw * M.PAGE.height) / M.PAGE.width;
   const scale = pw / M.PAGE.width;
@@ -308,7 +308,7 @@ export default function SpreadEditorPage() {
     <div className="ui-root" style={{ display: "flex", flexDirection: "column", height: "100vh", minHeight: 640 }}>
       {/* ---------- top bar ---------- */}
       <header style={{ background: "#fafbf7", borderBottom: "1px solid #e4e8dc" }}>
-        <div style={{ padding: "12px 24px", display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+        <div style={{ padding: "6px 20px", display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
           <Link to="/books" aria-label="Back to books" className="ui-icon-btn" style={{ border: "1px solid var(--line)", borderRadius: 999, width: 44, height: 44, background: "var(--paper)" }}>
             <IconBack />
           </Link>
@@ -321,7 +321,7 @@ export default function SpreadEditorPage() {
                 onBlur={(e) => e.target.value !== spread.title && save(M.updateSpread(bookId, spread.id, { title: e.target.value }))}
                 onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                 className="font-title"
-                style={{ fontSize: 26, border: "none", background: "transparent", color: "var(--ink)", padding: 0, outline: "none", width: 380, maxWidth: "60vw" }}
+                style={{ fontSize: 23, border: "none", background: "transparent", color: "var(--ink)", padding: 0, outline: "none", width: 380, maxWidth: "60vw" }}
               />
             ) : (
               <div className="font-title" style={{ fontSize: 26 }}>{book.title}</div>
@@ -377,7 +377,7 @@ export default function SpreadEditorPage() {
       {/* ---------- the book ---------- */}
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
       {spread && <Tray onAdd={addElement} onUpload={onUpload} uploading={uploading} />}
-      <main ref={stageRef} style={{ flex: 1, minWidth: 0, minHeight: 0, padding: "18px 0 18px", overflow: "auto" }}>
+      <main ref={stageRef} style={{ flex: 1, minWidth: 0, minHeight: 0, padding: "6px 0 8px", overflow: "auto" }}>
         {!spread ? (
           <div style={{ textAlign: "center", padding: 60 }}>
             <p className="font-hand" style={{ fontSize: 30 }}>This book has no pages yet.</p>
