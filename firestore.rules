@@ -42,14 +42,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ---------- Memories (scrapbook items) ----------
+    // ---------- Memories from the old scrapbook (retired) ----------
+    // Kept read-only: everything was copied into books; the new screens never write here.
     match /memory_posts/{id} {
       allow read: if isMember(resource.data.spaceCode);
-      allow create: if isMember(request.resource.data.spaceCode);
-      allow update: if isMember(resource.data.spaceCode)
-        && request.resource.data.spaceCode == resource.data.spaceCode;
-      // Deleting is a soft delete (is_deleted: true)
-      allow delete: if false;
+      allow create, update, delete: if false;
     }
 
     // ---------- Letters ----------
@@ -72,6 +69,18 @@ service cloud.firestore {
         );
 
       allow delete: if false;
+
+      // Sealed (time-capsule) letter text: the author always; other members only after openAt
+      match /sealed/{docId} {
+        allow read: if isMember(get(/databases/$(database)/documents/notes/$(id)).data.spaceCode)
+          && (get(/databases/$(database)/documents/notes/$(id)).data.author_id == request.auth.uid
+              || (get(/databases/$(database)/documents/notes/$(id)).data.is_shared == true
+                  && request.time >= get(/databases/$(database)/documents/notes/$(id)).data.openAt));
+        // written in the same batch as the note, so read the note as it will be (getAfter)
+        allow create: if getAfter(/databases/$(database)/documents/notes/$(id)).data.author_id == request.auth.uid
+          && isMember(getAfter(/databases/$(database)/documents/notes/$(id)).data.spaceCode);
+        allow update, delete: if false;
+      }
     }
 
     // ---------- Books (Phase 1) ----------

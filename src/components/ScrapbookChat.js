@@ -47,18 +47,20 @@ export default function ScrapbookChat({ open, onClose }) {
 
   /* Send message */
   const sendMessage = async () => {
-    if (!input.trim() || !spaceCode) return;
+    const text = input.trim();
+    if (!text || !spaceCode) return;
 
-    await addDoc(
-      collection(db, "scrapbook_chat", spaceCode, "messages"),
-      {
-        text: input.trim(),
+    setInput(""); // clear right away; the message shows instantly from the local write
+    try {
+      await addDoc(collection(db, "scrapbook_chat", spaceCode, "messages"), {
+        text,
         sender: auth.currentUser?.uid,
         created_at: serverTimestamp(),
-      }
-    );
-
-    setInput("");
+      });
+    } catch (e) {
+      console.error("Sending failed", e);
+      setInput(text); // give the words back so nothing is lost
+    }
   };
 
   /* Delete message */
@@ -101,12 +103,14 @@ export default function ScrapbookChat({ open, onClose }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          background: "#fafafa",
+          background: "var(--pistachio-50)",
+          fontFamily: "var(--font-ui)",
         }}
       >
-         Our Chat
+        <span className="font-title" style={{ fontSize: 20, fontWeight: 400 }}>Our chat</span>
         <button
           onClick={onClose}
+          aria-label="Close chat"
           style={{
             border: "none",
             background: "transparent",
@@ -153,8 +157,8 @@ export default function ScrapbookChat({ open, onClose }) {
                   display: "inline-block",
                   padding: "8px 12px",
                   borderRadius: 14,
-                  background: mine ? "#111" : "#f1f1f1",
-                  color: mine ? "#fff" : "#000",
+                  background: mine ? "var(--pistachio-700)" : "var(--pistachio-50)",
+                  color: mine ? "#fff" : "var(--ink)",
                   maxWidth: "80%",
                   cursor: mine ? "context-menu" : "default",
                 }}
@@ -220,7 +224,7 @@ export default function ScrapbookChat({ open, onClose }) {
           style={{
             border: "none",
             padding: "0 18px",
-            background: "#111",
+            background: "var(--pistachio-700)",
             color: "#fff",
             cursor: "pointer",
           }}

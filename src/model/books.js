@@ -27,7 +27,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { clamp01 } from "./geometry";
+import { clamp01, clampPos } from "./geometry";
 
 export const ELEMENT_TYPES = [
   "photo",
@@ -171,8 +171,8 @@ export const normalizeElement = (el) => {
   return {
     type: el.type,
     page: el.page === "right" ? "right" : "left",
-    x: clamp01(el.x),
-    y: clamp01(el.y),
+    x: clampPos(el.x),
+    y: clampPos(el.y),
     w: clamp01(el.w ?? 0.3),
     h: el.h == null ? null : clamp01(el.h),
     rotate: Math.max(-180, Math.min(180, Number(el.rotate) || 0)),
@@ -205,9 +205,10 @@ export const addElement = async (bookId, spreadId, uid, element) => {
 /* Position / size / rotation / style / content changes; fractions are clamped */
 export const updateElement = (bookId, spreadId, elementId, patch) => {
   const clean = {};
-  ["x", "y", "w"].forEach((k) => {
-    if (k in patch) clean[k] = clamp01(patch[k]);
+  ["x", "y"].forEach((k) => {
+    if (k in patch) clean[k] = clampPos(patch[k]);
   });
+  if ("w" in patch) clean.w = clamp01(patch.w);
   if ("h" in patch) clean.h = patch.h == null ? null : clamp01(patch.h);
   if ("rotate" in patch) clean.rotate = Math.max(-180, Math.min(180, Number(patch.rotate) || 0));
   if ("page" in patch) clean.page = patch.page === "right" ? "right" : "left";
@@ -223,6 +224,13 @@ export const updateElement = (bookId, spreadId, elementId, patch) => {
 export const deleteElement = (bookId, spreadId, elementId) =>
   updateDoc(elementRef(bookId, spreadId, elementId), {
     is_deleted: true,
+    updatedAt: serverTimestamp(),
+  });
+
+/* Undo for a delete */
+export const restoreElement = (bookId, spreadId, elementId) =>
+  updateDoc(elementRef(bookId, spreadId, elementId), {
+    is_deleted: false,
     updatedAt: serverTimestamp(),
   });
 

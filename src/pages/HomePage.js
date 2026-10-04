@@ -91,7 +91,7 @@ export default function HomePage() {
   /* ───────── Open space ───────── */
   const openSpace = () => {
     if (!activeSpaceCode) return;
-    navigate("/dashboard");
+    navigate("/home");
   };
 
   /* ───────── Calendar helpers ───────── */

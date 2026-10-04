@@ -15,9 +15,6 @@ const ts = Date.now();
 const A = { email: `qa.a.${ts}@example.com`, pass: "qa-test-123", name: "QA Alpha" };
 const B = { email: `qa.b.${ts}@example.com`, pass: "qa-test-123", name: "QA Beta" };
 
-const today = new Date();
-const DAY = today.getDate();
-const DATE_KEY = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(DAY).padStart(2, "0")}`;
 
 const results = [];
 const pass = (name, detail = "") => { results.push(["PASS", name, detail]); console.log("PASS", name, detail); };
@@ -49,10 +46,6 @@ async function signup(page, u) {
   await page.waitForURL("**/space", { timeout: 20000 });
 }
 
-async function openDayFromDashboard(page) {
-  await page.waitForURL("**/dashboard", { timeout: 20000 });
-  await page.locator("button.planner-calendar-cell").nth(DAY - 1).click();
-}
 
 (async () => {
   const consoleErrors = [];
@@ -67,8 +60,8 @@ async function openDayFromDashboard(page) {
     await a.click("text=+ Create New Space");
     await a.waitForURL("**/space/create");
     await a.click("text=Create Our Space");
-    await a.waitForURL("**/dashboard", { timeout: 20000 });
-    pass("A creates a space and lands on dashboard");
+    await a.waitForURL("**/home", { timeout: 20000 });
+    pass("A creates a space and lands on the new home");
 
     await a.goto(`${BASE}/space`);
     const codeText = await a.locator("text=Space Code:").first().locator("..").innerText();
@@ -83,132 +76,23 @@ async function openDayFromDashboard(page) {
     await a.fill('input[name="password"]', A.pass);
     await a.click('button[type="submit"]');
     try {
-      await a.waitForURL("**/dashboard", { timeout: 20000 });
-      pass("T1 login lands on dashboard", a.url());
+      await a.waitForURL("**/home", { timeout: 20000 });
+      pass("T1 login lands on the new home", a.url());
     } catch {
-      fail("T1 login lands on dashboard", a.url());
+      fail("T1 login lands on the new home", a.url());
     }
     await shot(a, "t1-dashboard");
 
-    // ---------------- Test 2: scrapbook add / drag / rotate / delete ----------------
-    await a.goto(`${BASE}/scrapbook/${DATE_KEY}`);
-    await a.click('button[aria-label="Open menu"]');
-    await a.click("text=Add text memory");
-    await a.fill(".scrap-preview-card textarea", "QA sticky memory");
-    await a.click(".scrap-preview-card button:has-text('Save')");
-    const item = a.locator(".scrap-item", { hasText: "QA sticky memory" });
-    await item.waitFor({ timeout: 15000 });
-    await a.locator(".scrap-preview-overlay").waitFor({ state: "detached", timeout: 15000 });
-    pass("T2 text memory added");
-
-    // drag by +120,+60
-    const before = await item.getAttribute("data-x").then(Number);
-    const beforeY = await item.getAttribute("data-y").then(Number);
-    const box = await item.boundingBox();
-    const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
-    await a.mouse.move(cx, cy);
-    await a.mouse.down();
-    for (let i = 1; i <= 20; i++) await a.mouse.move(cx + i * 6, cy + i * 3);
-    await a.mouse.up();
-    await a.waitForTimeout(1500);
-
-    // rotate +5 twice
-    await item.click();
-    await a.click('button[aria-label="Rotate right"]');
-    await a.click('button[aria-label="Rotate right"]');
-    const rotBefore = Number(await item.getAttribute("data-rotate"));
-    await a.waitForTimeout(2000);
-
-    await a.reload();
-    const item2 = a.locator(".scrap-item", { hasText: "QA sticky memory" });
-    await item2.waitFor({ timeout: 15000 });
-    const afterX = Number(await item2.getAttribute("data-x"));
-    const afterY = Number(await item2.getAttribute("data-y"));
-    const afterR = Number(await item2.getAttribute("data-rotate"));
-    check(Math.abs(afterX - (before + 120)) < 15 && Math.abs(afterY - (beforeY + 60)) < 15,
-      "T2 drag position persists after reload", `before=(${before},${beforeY}) after=(${afterX},${afterY})`);
-    check(afterR === rotBefore, "T2 rotation persists after reload", `rotate=${afterR} (expected ${rotBefore})`);
-    await shot(a, "t2-scrapbook-after-reload");
-
-    // delete
-    await item2.click();
-    await a.click('button[aria-label="Delete"]');
-    await a.waitForTimeout(1500);
-    await a.reload();
-    await a.waitForSelector(".scrapbook-canvas", { timeout: 15000 });
-    await a.waitForTimeout(2000);
-    const stillThere = await a.locator(".scrap-item", { hasText: "QA sticky memory" }).count();
-    check(stillThere === 0, "T2 delete persists after reload", `items with text: ${stillThere}`);
-
-    // ---------------- Test 3: shared letter vs draft ----------------
-    await a.goto(`${BASE}/dashboard`);
-    await openDayFromDashboard(a);
-    await a.click("text=📚 Letters & notes");
-    await a.waitForURL("**/notes");
-
-    async function writeLetter(title, body, shared) {
-      await a.click("text=+ Write a New Letter");
-      await a.waitForURL("**/notes/new");
-      await a.fill('input[placeholder="A title for your letter…"]', title);
-      await a.fill("textarea", body);
-      const box = a.locator('input[type="checkbox"]');
-      if ((await box.isChecked()) !== shared) await box.click();
-      await a.click("button:has-text('Send Letter')");
-      await a.waitForURL("**/notes", { timeout: 15000 });
-    }
-    await writeLetter("QA shared letter", "hello from the shared letter", true);
-    await writeLetter("QA private draft", "secret draft text", false);
-
-    await a.click("button:has-text('My Drafts')");
-    const draftEntry = a.locator("strong", { hasText: "QA private draft" });
-    await draftEntry.waitFor({ timeout: 15000 });
-    await draftEntry.click();
-    await a.waitForURL("**/notes/*");
-    const draftUrl = a.url();
-    const draftOpens = await a.locator("text=secret draft text").waitFor({ timeout: 15000 }).then(() => 1, () => 0);
-    check(draftOpens === 1, "T3 author can open own draft", draftUrl);
-
-    await a.goto(`${BASE}/scrapbook/${DATE_KEY}`);
-    await a.waitForSelector(".scrapbook-canvas", { timeout: 15000 });
-    await a.waitForTimeout(2500);
-    const sharedOnPage = await a.locator(".scrap-item", { hasText: "QA shared letter" }).count();
-    const draftOnPage = await a.locator(".scrap-item", { hasText: "QA private draft" }).count();
-    check(sharedOnPage === 1, "T3 shared letter appears on scrapbook", `count=${sharedOnPage}`);
-    check(draftOnPage === 0, "T3 draft does NOT appear on scrapbook", `count=${draftOnPage}`);
-    await shot(a, "t3-scrapbook-letters");
-
-    // ---------------- Test 4: second account can't read the draft ----------------
+    // ---------------- Account B joins the space ----------------
     const b = await newPage(browser, "B", consoleErrors);
     await signup(b, B);
     await b.click("text=Join Space with Code");
     await b.waitForURL("**/space/join");
     await b.fill('input[placeholder="Enter space code"]', spaceCode);
     await b.click("button:has-text('Join Space')");
-    await b.waitForURL("**/dashboard", { timeout: 20000 });
+    await b.waitForURL("**/home", { timeout: 20000 });
     pass("B joins A's space");
 
-    await openDayFromDashboard(b);
-    await b.click("text=📚 Letters & notes");
-    await b.waitForURL("**/notes");
-    await b.locator("strong", { hasText: "QA shared letter" }).waitFor({ timeout: 15000 });
-    pass("T4 B sees the shared letter");
-    await b.click("button:has-text('My Drafts')");
-    await b.waitForTimeout(1500);
-    const bDrafts = await b.locator("strong", { hasText: "QA private draft" }).count();
-    check(bDrafts === 0, "T4 B's draft list does not include A's draft", `count=${bDrafts}`);
-
-    await b.goto(draftUrl);
-    await b.locator("text=/not found|permission|secret draft text/i").first().waitFor({ timeout: 15000 }).catch(() => {});
-    const leaked = await b.locator("text=secret draft text").count();
-    const blockedMsg = await b.locator("text=/not found|permission/i").count();
-    check(leaked === 0 && blockedMsg > 0, "T4 B opening A's draft URL is blocked", `leaked=${leaked} blockedMsg=${blockedMsg}`);
-    await shot(b, "t4-b-draft-blocked");
-
-    await b.goto(`${BASE}/scrapbook/${DATE_KEY}`);
-    await b.waitForSelector(".scrapbook-canvas", { timeout: 15000 });
-    await b.waitForTimeout(2500);
-    const bShared = await b.locator(".scrap-item", { hasText: "QA shared letter" }).count();
-    check(bShared === 1, "T4 B sees the shared letter on the scrapbook", `count=${bShared}`);
 
     // ---------------- Phase 1: books -> spreads -> elements (model + rules) ----------------
     // Calls the data model in the browser as each user (dev-only window.__ourspace).
@@ -305,6 +189,56 @@ async function openDayFromDashboard(page) {
     const off = await probeAnon();
     check(off.gift === null || off.gift?.denied, "T10 disabled link no longer opens", JSON.stringify(off.gift));
     check(off.spreads?.denied === "permission-denied", "T10 disabled link can't read pages", JSON.stringify(off.spreads));
+
+    // ---------------- Phase 2: Letters page (sealed time capsules) ----------------
+    const tomorrow = new Date(Date.now() + 2 * 86400000);
+    const dateKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+    async function writeLetterUI(title, body, { share = true, seal = false } = {}) {
+      await a.click('button:has-text("Write a letter")');
+      const dlg = a.locator('[role="dialog"][aria-label="Write a letter"]');
+      await dlg.locator('input[placeholder="open when you feel lonely"]').fill(title);
+      await dlg.locator("textarea").fill(body);
+      const shareBox = dlg.locator('label:has-text("Share with my space") input');
+      if ((await shareBox.isChecked()) !== share) await shareBox.click();
+      if (share && seal) {
+        await dlg.locator('label:has-text("Seal it until") input').click();
+        await dlg.locator('input[type="date"]').fill(dateKey);
+      }
+      await dlg.locator("button.ui-btn-primary").click();
+      await dlg.waitFor({ state: "detached", timeout: 15000 });
+    }
+    await a.goto(`${BASE}/letters`);
+    await a.locator('h1:has-text("Letters")').waitFor({ timeout: 15000 });
+    await writeLetterUI("QA time capsule", "open this on your birthday", { seal: true });
+    await writeLetterUI("QA open letter", "you are my favourite person");
+    await writeLetterUI("QA new draft", "not ready yet", { share: false });
+    await a.click('[role="tab"]:has-text("Shared")');
+    const capsule = a.locator('[data-letter]', { hasText: "QA time capsule" });
+    await capsule.waitFor({ timeout: 15000 });
+    check((await capsule.locator("text=opens on").count()) === 1, "T11 sealed letter shows as a locked envelope with its opening date");
+    await shot(a, "t11-letters");
+    await capsule.click();
+    const ownText = await a.locator('[data-testid="letter-text"]').innerText({ timeout: 15000 }).catch(() => "");
+    check(ownText.includes("open this on your birthday"), "T11 the writer can read their own sealed letter", ownText);
+    await a.click('[role="dialog"] button:has-text("Close")');
+
+    await b.goto(`${BASE}/letters`);
+    const bCapsule = b.locator('[data-letter]', { hasText: "QA time capsule" });
+    await bCapsule.waitFor({ timeout: 15000 });
+    await bCapsule.click();
+    await b.locator('[role="dialog"] [data-testid="letter-text"], [role="dialog"] >> text=Come back then').first().waitFor({ timeout: 15000 });
+    const leakedCapsule = await b.locator('[data-testid="letter-text"]').count();
+    const lockedMsg = await b.locator("text=Come back then").count();
+    check(leakedCapsule === 0 && lockedMsg === 1, "T12 the friend can't open the sealed letter early", `leaked=${leakedCapsule} locked=${lockedMsg}`);
+    await shot(b, "t12-sealed-for-friend");
+    await b.click('[role="dialog"] button:has-text("Close")');
+    await b.locator('[data-letter]', { hasText: "QA open letter" }).click();
+    const openText = await b.locator('[data-testid="letter-text"]').innerText({ timeout: 15000 }).catch(() => "");
+    check(openText.includes("favourite person"), "T12 the friend reads the open letter", openText);
+    await b.click('[role="dialog"] button:has-text("Close")');
+    await b.click('[role="tab"]:has-text("My drafts")');
+    await b.waitForTimeout(1500);
+    check((await b.locator('[data-letter]', { hasText: "QA new draft" }).count()) === 0, "T12 the writer's draft stays private");
   } catch (e) {
     fail("Script error", e.message.split("\n")[0]);
   } finally {

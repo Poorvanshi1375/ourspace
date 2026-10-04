@@ -89,7 +89,7 @@ export default function JoinSpacePage() {
           { merge: true }
         );
 
-        navigate("/dashboard");
+        navigate("/app");
         return;
       }
 
@@ -135,7 +135,7 @@ export default function JoinSpacePage() {
       );
 
       /* 7️⃣ Done */
-      navigate("/dashboard");
+      navigate("/app");
     } catch (err) {
       console.error("Error joining space:", err);
       setError("Something went wrong while joining the space.");

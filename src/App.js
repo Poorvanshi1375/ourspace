@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useParams,
 } from "react-router-dom";
 
 import { AuthProvider, useAuth } from "./auth";
@@ -12,21 +13,15 @@ import { AuthProvider, useAuth } from "./auth";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
-import DashboardPage from "./pages/DashboardPage";
-import ScrapbookPage from "./pages/ScrapbookPage";
 import ProfilePage from "./pages/ProfilePage";
-import GalleryPage from "./pages/GalleryPage";
-import NotesListPage from "./pages/NotesListPage";
-import NewNotePage from "./pages/NewNotePage";
-import ReadNotePage from "./pages/ReadNotePage";
-import CameraPage from "./pages/CameraPage";
-import NewMemoryPage from "./pages/NewMemoryPage";
-import UploadMemoryPage from "./pages/UploadMemoryPage";
-
-// ✅ NEW
 import SpaceChoicePage from "./pages/SpaceChoicePage";
 import CreateSpacePage from "./pages/CreateSpacePage";
 import JoinSpacePage from "./pages/JoinSpacePage";
+import MySpacePage from "./pages/MySpacePage";
+import BooksPage from "./pages/BooksPage";
+import SpreadEditorPage from "./pages/SpreadEditorPage";
+import LettersPage from "./pages/LettersPage";
+import TimelinePage from "./pages/TimelinePage";
 
 /* ---------- PROTECTED ROUTE ---------- */
 function ProtectedRoute({ children }) {
@@ -37,6 +32,8 @@ function ProtectedRoute({ children }) {
 
   return children;
 }
+
+const Protected = (element) => <ProtectedRoute>{element}</ProtectedRoute>;
 
 /* ---------- SPACE GATE ---------- */
 function SpaceGate() {
@@ -49,7 +46,24 @@ function SpaceGate() {
     return <Navigate to="/space" replace />;
   }
 
-  return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/home" replace />;
+}
+
+/* ---------- Old addresses (retired screens) ---------- */
+
+/* An old scrapbook day -> that day's spread in the migrated "Our memories" book */
+function OldScrapbookRedirect() {
+  const { date } = useParams();
+  const { activeSpaceCode, loading } = useAuth();
+  if (loading) return <div>Loading...</div>;
+  if (!activeSpaceCode) return <Navigate to="/home" replace />;
+  return <Navigate to={`/books/memories-${activeSpaceCode}?spread=day-${date}`} replace />;
+}
+
+/* An old letter link -> the same letter opened in Letters */
+function OldLetterRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/letters?open=${id}`} replace />;
 }
 
 export default function App() {
@@ -62,140 +76,33 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          {/* Space Gate (decides dashboard vs space choice) */}
-          <Route
-            path="/app"
-            element={
-              <ProtectedRoute>
-                <SpaceGate />
-              </ProtectedRoute>
-            }
-          />
+          {/* Decides home vs space setup */}
+          <Route path="/app" element={Protected(<SpaceGate />)} />
 
           {/* Space setup */}
-          <Route
-            path="/space"
-            element={
-              <ProtectedRoute>
-                <SpaceChoicePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/space/create"
-            element={
-              <ProtectedRoute>
-                <CreateSpacePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/space/join"
-            element={
-              <ProtectedRoute>
-                <JoinSpacePage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/space" element={Protected(<SpaceChoicePage />)} />
+          <Route path="/space/create" element={Protected(<CreateSpacePage />)} />
+          <Route path="/space/join" element={Protected(<JoinSpacePage />)} />
 
-          {/* Main App */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* Main app */}
+          <Route path="/home" element={Protected(<MySpacePage />)} />
+          <Route path="/books" element={Protected(<BooksPage />)} />
+          <Route path="/books/:bookId" element={Protected(<SpreadEditorPage />)} />
+          <Route path="/letters" element={Protected(<LettersPage />)} />
+          <Route path="/timeline" element={Protected(<TimelinePage />)} />
+          <Route path="/profile" element={Protected(<ProfilePage />)} />
 
-          {/* Scrapbook ONLY opens from calendar */}
-          <Route
-            path="/scrapbook/:date"
-            element={
-              <ProtectedRoute>
-                <ScrapbookPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/memory/new"
-            element={
-              <ProtectedRoute>
-                <NewMemoryPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/camera"
-            element={
-              <ProtectedRoute>
-                <CameraPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notes"
-            element={
-              <ProtectedRoute>
-                <NotesListPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/notes/new"
-            element={
-              <ProtectedRoute>
-                <NewNotePage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/notes/:id"
-            element={
-              <ProtectedRoute>
-                <ReadNotePage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/gallery"
-            element={
-              <ProtectedRoute>
-                <GalleryPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/gallery/:date"
-            element={
-              <ProtectedRoute>
-                <GalleryPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/upload/memory"
-            element={
-              <ProtectedRoute>
-                <UploadMemoryPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* Retired screens: old links keep working */}
+          <Route path="/dashboard" element={<Navigate to="/home" replace />} />
+          <Route path="/scrapbook/:date" element={Protected(<OldScrapbookRedirect />)} />
+          <Route path="/notes" element={<Navigate to="/letters" replace />} />
+          <Route path="/notes/new" element={<Navigate to="/letters" replace />} />
+          <Route path="/notes/:id" element={<OldLetterRedirect />} />
+          <Route path="/memory/new" element={<Navigate to="/home" replace />} />
+          <Route path="/upload/memory" element={<Navigate to="/home" replace />} />
+          <Route path="/camera" element={<Navigate to="/home" replace />} />
+          <Route path="/gallery" element={<Navigate to="/timeline" replace />} />
+          <Route path="/gallery/:date" element={<Navigate to="/timeline" replace />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
