@@ -1,5 +1,5 @@
 // src/gift/ShareGiftModal.js — the creator sets up the gift page and its link
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as M from "../model";
 import { uploadMedia } from "../utils/cloudinary";
 import { IconPlus, IconTrash, IconCopy } from "../ui/icons";
@@ -32,9 +32,24 @@ export default function ShareGiftModal({ book, onClose, onSaved }) {
   const [error, setError] = useState("");
   const [token, setToken] = useState(book.giftEnabled ? book.giftToken : null);
   const [copied, setCopied] = useState(false);
+  // what just happened, shown under the form: { kind: "created" | "updated" | "off", unlockAt }
+  const [result, setResult] = useState(null);
+  const [flash, setFlash] = useState(false);
+  const resultRef = useRef(null);
+  const onThisComputerOnly = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
+  useEffect(() => {
+    if (result) resultRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [result]);
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(false), 2500);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   const save = async () => {
     setError("");
+    setResult(null);
     if (on && !to.trim()) return setError("Who is this gift for? Add their name.");
     let unlockAt = null;
     if (lockDate) {
@@ -56,11 +71,15 @@ export default function ShareGiftModal({ book, onClose, onSaved }) {
       await M.updateBook(book.id, { recipient: { ...(book.recipient || {}), name: to.trim() }, gift });
       if (on) {
         const t = await M.enableGift({ ...book }, { unlockAt, allowReplies });
+        setResult({ kind: token ? "updated" : "created", unlockAt });
         setToken(t);
-      } else if (book.giftEnabled) {
-        await M.disableGift(book);
+        setCopied(false);
+      } else {
+        if (book.giftEnabled) await M.disableGift(book);
         setToken(null);
+        setResult({ kind: "off" });
       }
+      setFlash(true);
       onSaved?.();
     } catch (e) {
       console.error(e);
@@ -87,7 +106,7 @@ export default function ShareGiftModal({ book, onClose, onSaved }) {
 
   return (
     <div role="dialog" aria-label="Share gift" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(43,48,38,.45)", display: "grid", placeItems: "center", zIndex: 200000, padding: 24 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--paper)", width: "100%", maxWidth: 720, maxHeight: "90vh", overflow: "auto", borderRadius: 18, padding: "26px 30px", boxShadow: "0 30px 60px rgba(0,0,0,.25)" }}>
+      <div ref={resultRef} onClick={(e) => e.stopPropagation()} style={{ background: "var(--paper)", width: "100%", maxWidth: 720, maxHeight: "90vh", overflow: "auto", borderRadius: 18, padding: "26px 30px", boxShadow: "0 30px 60px rgba(0,0,0,.25)" }}>
         <h2 className="font-title" style={{ margin: 0, fontSize: 32 }}>Share as a gift</h2>
         <p className="muted" style={{ margin: "6px 0 0", fontSize: 14 }}>
           The link opens this book as a sealed envelope, no login needed. It shows the book as it is, so later edits show up too.
@@ -115,6 +134,44 @@ export default function ShareGiftModal({ book, onClose, onSaved }) {
               <IconCopy size={14} /> {copied ? "Copied" : "Copy link"}
             </button>
             <a className="ui-btn ui-btn-outline" style={{ minHeight: 36, padding: "6px 14px" }} href={giftUrl(token)} target="_blank" rel="noreferrer">Preview</a>
+          </div>
+        )}
+
+        {result && (
+          <div role="status" data-testid="share-result" style={{ marginTop: 18, background: "var(--pistachio-50)", border: "1px solid #cfddbf", borderRadius: 14, padding: "16px 18px" }}>
+            {result.kind === "off" ? (
+              <>
+                <div style={{ fontWeight: 700, color: "var(--pistachio-900)" }}>✓ Saved. The gift link is off.</div>
+                <p style={{ margin: "6px 0 0", fontSize: 14 }}>
+                  The old link no longer opens. Turn it back on any time and you'll get a new link to send.
+                </p>
+              </>
+            ) : (
+              <>
+                <div style={{ fontWeight: 700, color: "var(--pistachio-900)" }}>
+                  ✓ {result.kind === "created" ? `Your gift for ${to.trim()} is ready.` : "Changes saved to the same link."}
+                </div>
+                <ol style={{ margin: "8px 0 0", paddingLeft: 20, fontSize: 14, lineHeight: 1.6 }}>
+                  <li><b>Copy the link</b> (the box just above).</li>
+                  <li><b>Send it to {to.trim()}</b> however you like: WhatsApp, Instagram, email.</li>
+                  <li>
+                    They open it without logging in and see the sealed envelope
+                    {result.unlockAt
+                      ? `, with a countdown until ${result.unlockAt.toLocaleDateString("en-GB", { day: "numeric", month: "long" })}. The pages unlock that day.`
+                      : ", ready to open right away."}
+                  </li>
+                </ol>
+                <p className="muted" style={{ margin: "8px 0 0", fontSize: 13 }}>
+                  Edits you make to the book later show up in the same link. Use Preview to see exactly what they'll see.
+                </p>
+              </>
+            )}
+            {onThisComputerOnly && result.kind !== "off" && (
+              <p style={{ margin: "10px 0 0", fontSize: 13, color: "#7a5a1e", background: "#fbf3df", borderRadius: 8, padding: "8px 10px" }}>
+                Heads up: the app is only running on this computer right now, so this link opens here but not for {to.trim() || "them"} yet.
+                Once the app is online, links like this will work for them.
+              </p>
+            )}
           </div>
         )}
 
@@ -167,7 +224,7 @@ export default function ShareGiftModal({ book, onClose, onSaved }) {
         {error && <p role="alert" style={{ color: "#a23b2c", fontSize: 14 }}>{error}</p>}
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
           <button className="ui-btn ui-btn-primary" onClick={save} disabled={busy || uploading}>
-            {busy ? "Saving…" : on ? (token ? "Save changes" : "Create gift link") : "Save (link off)"}
+            {busy ? "Saving…" : flash ? "Saved ✓" : on ? (token ? "Save changes" : "Create gift link") : "Save (link off)"}
           </button>
           <button className="ui-btn ui-btn-outline" onClick={onClose}>Close</button>
         </div>

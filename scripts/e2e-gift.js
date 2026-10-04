@@ -78,6 +78,10 @@ const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
     await dlg.locator('button:has-text("Create gift link")').click();
     const link = await dlg.locator('[data-testid="gift-link"]').innerText({ timeout: 20000 });
     check(/\/gift\/[A-Za-z0-9_-]{20,}$/.test(link), "Share gift creates a secret link", link);
+    const created = await dlg.locator('[data-testid="share-result"]').innerText({ timeout: 10000 }).catch(() => "");
+    check(/Your gift for Ishu is ready/.test(created) && /Copy the link/.test(created) && /countdown until/.test(created),
+      "After saving, the dialog says it's ready and what to do next", created.split("\n")[0]);
+    check((await dlg.locator('button:has-text("Saved ✓")').count()) === 1, "The save button confirms with 'Saved ✓'");
     await shot(a, "1-share-modal");
     await dlg.locator('button:has-text("Close")').click();
 
@@ -98,7 +102,9 @@ const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
     await a.click('button:has-text("Gift settings")');
     await dlg.locator('input[aria-label="Sealed until"]').fill("");
     await dlg.locator('button:has-text("Save changes")').click();
-    await a.waitForTimeout(2500);
+    const updated = await dlg.locator('[data-testid="share-result"]').innerText({ timeout: 15000 }).catch(() => "");
+    check(/Changes saved to the same link/.test(updated) && /ready to open right away/.test(updated),
+      "Saving changes confirms it and says it opens right away", updated.split("\n")[0]);
     await dlg.locator('button:has-text("Close")').click();
 
     // ---- recipient opens it ----
@@ -136,7 +142,8 @@ const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
     await a.click('button:has-text("Gift settings")');
     await dlg.locator('label:has-text("Gift link is on") input').click();
     await dlg.locator('button:has-text("Save (link off)")').click();
-    await a.waitForTimeout(2500);
+    const off = await dlg.locator('[data-testid="share-result"]').innerText({ timeout: 15000 }).catch(() => "");
+    check(/The gift link is off/.test(off), "Turning the link off is confirmed in the dialog", off.split("\n")[0]);
     await r.goto(link);
     await r.locator("text=This gift link isn't active").waitFor({ timeout: 20000 });
     pass("Turning the link off makes it stop working");
