@@ -209,6 +209,102 @@ async function openDayFromDashboard(page) {
     await b.waitForTimeout(2500);
     const bShared = await b.locator(".scrap-item", { hasText: "QA shared letter" }).count();
     check(bShared === 1, "T4 B sees the shared letter on the scrapbook", `count=${bShared}`);
+
+    // ---------------- Phase 1: books -> spreads -> elements (model + rules) ----------------
+    // Calls the data model in the browser as each user (dev-only window.__ourspace).
+    const model = async (page, fn, arg) => {
+      await page.waitForFunction(() => window.__ourspace, null, { timeout: 15000 });
+      return page.evaluate(fn, arg);
+    };
+
+    const made = await model(a, async (code) => {
+      const { model: m, auth } = window.__ourspace;
+      const uid = auth.currentUser.uid;
+      const bookId = await m.createBook(code, uid, { title: "QA book", recipient: { name: "Ishu" } });
+      const spreadId = await m.createSpread(bookId, uid, { title: "Day out", date: "2025-04-18" });
+      const elementId = await m.addElement(bookId, spreadId, uid, {
+        type: "photo", page: "right", x: 0.2, y: 0.3, w: 0.4, rotate: 4, content: { caption: "pure serotonin" },
+      });
+      await m.updateElement(bookId, spreadId, elementId, { x: 1.7, y: 0.5, rotate: -8 });
+      let badType = null;
+      try { await m.addElement(bookId, spreadId, uid, { type: "hologram", x: 0, y: 0 }); } catch (e) { badType = e.message; }
+      const el = (await m.listElements(bookId, spreadId))[0];
+      const books = await m.listBooks(code);
+      return { bookId, spreadId, el, nBooks: books.length, badType };
+    }, spaceCode);
+    check(made.nBooks === 1, "T5 member creates a book in their space", made.bookId);
+    check(made.el && made.el.page === "right" && made.el.x === 1 && made.el.y === 0.5 && made.el.rotate === -8,
+      "T5 element saved as page fractions (x clamped to 1)", JSON.stringify(made.el && { page: made.el.page, x: made.el.x, y: made.el.y, rotate: made.el.rotate }));
+    check(/Unknown element type/.test(made.badType || ""), "T5 unknown element type rejected", made.badType);
+
+    const bRead = await model(b, async ({ bookId, spreadId }) => {
+      const { model: m } = window.__ourspace;
+      return { title: (await m.getBook(bookId))?.title, n: (await m.listElements(bookId, spreadId)).length };
+    }, made);
+    check(bRead.title === "QA book" && bRead.n === 1, "T6 other member reads the book and its elements", JSON.stringify(bRead));
+
+    // outsider: signed in, but not in the space
+    const C = { email: `qa.b.${ts}9@example.com`, pass: "qa-test-123", name: "QA Gamma" };
+    const c = await newPage(browser, "C", consoleErrors);
+    await signup(c, C);
+    const cRead = await model(c, async ({ bookId, spreadId, code }) => {
+      const { model: m } = window.__ourspace;
+      const t = async (f) => { try { await f(); return "allowed"; } catch (e) { return e.code; } };
+      return {
+        book: await t(() => m.getBook(bookId)),
+        elements: await t(() => m.listElements(bookId, spreadId)),
+        books: await t(() => m.listBooks(code)),
+      };
+    }, { ...made, code: spaceCode });
+    check(cRead.book === "permission-denied" && cRead.elements === "permission-denied" && cRead.books === "permission-denied",
+      "T7 outsider can't read the book, its elements or the space's books", JSON.stringify(cRead));
+
+    // gift link, time capsule locked
+    const token = await model(a, async ({ bookId }) => {
+      const { model: m } = window.__ourspace;
+      const book = await m.getBook(bookId);
+      return m.enableGift(book, { unlockAt: new Date(Date.now() + 86400000), allowReplies: true });
+    }, made);
+    const anon = await newPage(browser, "anon", consoleErrors);
+    await anon.goto(`${BASE}/`);
+    const probeAnon = async () => model(anon, async ({ token, bookId, spreadId, code }) => {
+      const { model: m } = window.__ourspace;
+      const t = async (f) => { try { const v = await f(); return v; } catch (e) { return { denied: e.code }; } };
+      const gift = await t(() => m.openGift(token));
+      return {
+        gift: gift && !gift.denied ? { title: gift.book.title, locked: gift.locked, spreads: gift.spreads.length } : gift,
+        spreads: await t(async () => (await m.listSpreads(bookId)).length),
+        elements: await t(async () => (await m.listElements(bookId, spreadId)).length),
+        books: await t(async () => (await m.listBooks(code)).length),
+        reply: await t(() => m.addReply(bookId, { spreadId, text: "I cried at this one", name: "Ishu" })),
+      };
+    }, { token, ...made, code: spaceCode });
+
+    const locked = await probeAnon();
+    check(locked.gift && locked.gift.title === "QA book" && locked.gift.locked === true && locked.gift.spreads === 0,
+      "T8 gift link (no login), before unlock: cover only", JSON.stringify(locked.gift));
+    check(locked.spreads?.denied === "permission-denied" && locked.elements?.denied === "permission-denied" && locked.reply?.denied === "permission-denied",
+      "T8 before unlock: pages and replies blocked by the rules", JSON.stringify({ s: locked.spreads, e: locked.elements, r: locked.reply }));
+    check(locked.books?.denied === "permission-denied", "T8 link can't list the space's books", JSON.stringify(locked.books));
+
+    // unlock now (same token)
+    await model(a, async ({ bookId }) => {
+      const { model: m } = window.__ourspace;
+      return m.enableGift(await m.getBook(bookId), { unlockAt: null, allowReplies: true });
+    }, made);
+    const open = await probeAnon();
+    check(open.gift && open.gift.locked === false && open.gift.spreads === 1 && open.elements === 1,
+      "T9 after unlock: link shows the live pages", JSON.stringify({ gift: open.gift, elements: open.elements }));
+    check(typeof open.reply === "string", "T9 recipient can leave a reply without login", JSON.stringify(open.reply));
+
+    // turn the link off
+    await model(a, async ({ bookId }) => {
+      const { model: m } = window.__ourspace;
+      return m.disableGift(await m.getBook(bookId));
+    }, made);
+    const off = await probeAnon();
+    check(off.gift === null || off.gift?.denied, "T10 disabled link no longer opens", JSON.stringify(off.gift));
+    check(off.spreads?.denied === "permission-denied", "T10 disabled link can't read pages", JSON.stringify(off.spreads));
   } catch (e) {
     fail("Script error", e.message.split("\n")[0]);
   } finally {
@@ -217,7 +313,8 @@ async function openDayFromDashboard(page) {
 
   console.log("\n==== RESULTS ====");
   for (const [s, n, d] of results) console.log(`${s}  ${n}${d ? "  — " + d : ""}`);
-  const relevant = consoleErrors.filter((e) => !/favicon|DevTools/i.test(e));
+  const relevant = consoleErrors.filter((e) => !/favicon|DevTools|permission|insufficient/i.test(e));
+  // permission errors are expected: several checks prove access is blocked
   console.log(`\n==== CONSOLE ERRORS (${relevant.length}) ====`);
   relevant.slice(0, 30).forEach((e) => console.log(e.slice(0, 400)));
   console.log(`\nAccounts used: ${A.email}, ${B.email}`);

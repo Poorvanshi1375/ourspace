@@ -74,6 +74,75 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---------- Books (Phase 1) ----------
+    //
+    // Members of the book's space can read and edit it.
+    // A gifted book (giftEnabled) can also be read WITHOUT login by whoever has its link:
+    //   - the book itself (cover, title, countdown) always,
+    //   - its spreads and elements only once unlockAt has passed (time capsule).
+    // Nobody can LIST gifted books; a viewer reaches one only through gifts/{token}.
+
+    function bookData(bookId) {
+      return get(/databases/$(database)/documents/books/$(bookId)).data;
+    }
+
+    function unlocked(book) {
+      return book.unlockAt == null || request.time >= book.unlockAt;
+    }
+
+    function giftReadable(book) {
+      return book.giftEnabled == true && book.is_deleted == false && unlocked(book);
+    }
+
+    match /books/{bookId} {
+      allow get: if isMember(resource.data.spaceCode)
+        || (resource.data.giftEnabled == true && resource.data.is_deleted == false);
+      allow list: if isMember(resource.data.spaceCode);
+
+      allow create: if isMember(request.resource.data.spaceCode)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.is_deleted == false;
+
+      allow update: if isMember(resource.data.spaceCode)
+        && request.resource.data.spaceCode == resource.data.spaceCode
+        && request.resource.data.createdBy == resource.data.createdBy;
+
+      allow delete: if false;
+
+      match /spreads/{spreadId} {
+        allow read: if isMember(bookData(bookId).spaceCode) || giftReadable(bookData(bookId));
+        allow create, update: if isMember(bookData(bookId).spaceCode);
+        allow delete: if false;
+
+        match /elements/{elementId} {
+          allow read: if isMember(bookData(bookId).spaceCode) || giftReadable(bookData(bookId));
+          allow create, update: if isMember(bookData(bookId).spaceCode);
+          allow delete: if false;
+        }
+      }
+
+      // Sticky notes / reactions left by the recipient (no login needed)
+      match /replies/{replyId} {
+        allow read: if isMember(bookData(bookId).spaceCode) || giftReadable(bookData(bookId));
+        allow create: if giftReadable(bookData(bookId))
+          && bookData(bookId).allowReplies == true
+          && request.resource.data.keys().hasOnly(['spreadId', 'text', 'reaction', 'name', 'createdAt'])
+          && request.resource.data.text is string && request.resource.data.text.size() <= 500
+          && request.resource.data.name is string && request.resource.data.name.size() <= 60;
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------- Gift links ----------
+    // The token IS the secret: anyone holding it may read this one lookup doc; listing is never allowed.
+    match /gifts/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isMember(request.resource.data.spaceCode)
+        && bookData(request.resource.data.bookId).spaceCode == request.resource.data.spaceCode;
+      allow delete: if isMember(resource.data.spaceCode);
+    }
+
     // ---------- Chat ----------
     match /scrapbook_chat/{code}/messages/{messageId} {
       allow read: if isMember(code);

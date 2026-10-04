@@ -40,6 +40,11 @@ npm run e2e        # scripts/e2e-check.js — exits 1 if any check fails
 - Expected console errors: B's `Missing or insufficient permissions` when opening A's
   draft. That is the security rule working.
 
+**Data model checks (T5–T10):** the dev build exposes `window.__ourspace = { model, auth }`
+(see `src/index.js`, stripped from production). The e2e calls `src/model` through it as a member,
+an outsider and a logged-out gift recipient, so the real `firestore.rules` are exercised. Wait for
+it with `page.waitForFunction(() => window.__ourspace)` before `page.evaluate`.
+
 For a one-off interaction, copy the login block from `scripts/e2e-check.js`
 (fill `input[name="email"]` / `input[name="password"]`, click `button[type="submit"]`,
 wait for `**/dashboard`) and add your steps.
@@ -69,5 +74,5 @@ Needs a service account key saved as `serviceAccountKey.json` in the project roo
   New memory need that selection — they read the date from router state.
 - **Scrapbook URL is direct:** `/scrapbook/YYYY-MM-DD` works without the dashboard.
 - **New Firestore indexes take a few minutes to build** after `firebase deploy`; until then
-  queries fail with an "index is building" error in the console.
+  queries fail with "That index is currently building". Retry the e2e every couple of minutes.
 - Firebase CLI isn't installed globally: use `npx firebase-tools <command>`.
