@@ -32,12 +32,14 @@ const tileStyle = {
 
 export default function Tray({ onAdd, onUpload, uploading }) {
   const [tab, setTab] = useState("photos");
+  const [open, setOpen] = useState(true); // clicking the active tool again folds the panel away
+  const current = TABS.find((t) => t.key === tab);
   const [category, setCategory] = useState("All");
   const fileRef = useRef(null);
 
   return (
-    <section aria-label="Add to spread" style={{ background: "var(--paper)", borderTop: "1px solid var(--line)" }}>
-      <div role="tablist" aria-label="Tools" style={{ display: "flex", gap: 4, flexWrap: "wrap", padding: "10px 24px", background: "var(--pistachio-50)" }}>
+    <aside aria-label="Add to spread" style={{ display: "flex", flex: "none", height: "100%", minHeight: 0, background: "var(--paper)", borderRight: "1px solid var(--line)" }}>
+      <div role="tablist" aria-label="Tools" aria-orientation="vertical" style={{ display: "flex", flexDirection: "column", gap: 4, padding: "12px 8px", width: 84, flex: "none", background: "var(--pistachio-50)", overflowY: "auto" }}>
         {TABS.map(({ key, label, Icon, soon }) => (
           <button
             key={key}
@@ -45,24 +47,40 @@ export default function Tray({ onAdd, onUpload, uploading }) {
             aria-selected={tab === key}
             disabled={soon}
             title={soon ? "Coming soon" : undefined}
-            onClick={() => setTab(key)}
-            className="ui-btn"
+            onClick={() => {
+              if (key === tab) setOpen((o) => !o);
+              else {
+                setTab(key);
+                setOpen(true);
+              }
+            }}
             style={{
-              minHeight: 40,
-              padding: "8px 16px",
-              background: tab === key ? "var(--pistachio-700)" : "transparent",
-              color: tab === key ? "#fff" : "#3f443a",
-              fontWeight: 500,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              padding: "10px 4px",
+              border: "none",
+              borderRadius: 12,
+              cursor: soon ? "not-allowed" : "pointer",
+              opacity: soon ? 0.5 : 1,
+              background: tab === key && open ? "var(--pistachio-700)" : tab === key ? "var(--pistachio-100)" : "transparent",
+              color: tab === key && open ? "#fff" : "#3f443a",
+              font: "500 11.5px var(--font-ui)",
+              lineHeight: 1.15,
+              textAlign: "center",
             }}
           >
-            <Icon size={16} />
+            <Icon size={20} />
             {label}
-            {soon && <span style={{ fontSize: 11, opacity: 0.8 }}>· soon</span>}
+            {soon && <span style={{ fontSize: 10 }}>soon</span>}
           </button>
         ))}
       </div>
 
-      <div style={{ padding: "14px 24px 18px", display: "flex", gap: 12, overflowX: "auto", alignItems: "center", minHeight: 112 }}>
+      {open && (
+      <div role="tabpanel" aria-label={current?.label} style={{ width: 252, flex: "none", overflowY: "auto", padding: "16px 16px 24px", display: "flex", flexWrap: "wrap", gap: 12, alignContent: "flex-start" }}>
+        <h2 className="font-title" style={{ width: "100%", margin: "0 0 4px", fontSize: 22 }}>{current?.label}</h2>
         {tab === "photos" && (
           <>
             <input
@@ -76,11 +94,11 @@ export default function Tray({ onAdd, onUpload, uploading }) {
                 e.target.value = "";
               }}
             />
-            <button style={{ ...tileStyle, border: "2px dashed #c9d3be", background: "transparent", width: 180 }} onClick={() => fileRef.current?.click()} disabled={uploading}>
+            <button style={{ ...tileStyle, border: "2px dashed #c9d3be", background: "transparent", width: "100%", height: 120 }} onClick={() => fileRef.current?.click()} disabled={uploading}>
               <IconPlus size={22} />
               {uploading ? "Uploading…" : "Upload photos or videos"}
             </button>
-            <span className="muted" style={{ fontSize: 13 }}>
+            <span className="muted" style={{ fontSize: 13, lineHeight: 1.4 }}>
               They land on the left page as polaroids. Double-click a polaroid to write its caption.
             </span>
           </>
@@ -127,7 +145,7 @@ export default function Tray({ onAdd, onUpload, uploading }) {
                 </button>
               ))}
             </div>
-            <div style={{ display: "flex", gap: 12, overflowX: "auto" }}>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               {Object.entries(STICKERS)
                 .filter(([, s]) => category === "All" || s.category === category)
                 .map(([key, s]) => (
@@ -155,6 +173,7 @@ export default function Tray({ onAdd, onUpload, uploading }) {
           </>
         )}
       </div>
-    </section>
+      )}
+    </aside>
   );
 }

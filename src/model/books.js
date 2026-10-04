@@ -110,7 +110,10 @@ export const createBook = async (
   return ref.id;
 };
 
-const BOOK_EDITABLE = ["title", "recipient", "occasion", "theme", "cover", "status"];
+// gift = what the recipient's page shows:
+//   { heading, from, note, story: [{ when, text }], counts: { spreads, photos, notes, letters, videos },
+//     song: { title, artist, audioUrl } }
+const BOOK_EDITABLE = ["title", "recipient", "occasion", "theme", "cover", "status", "gift"];
 
 export const updateBook = (bookId, patch) => {
   const clean = {};
@@ -268,6 +271,22 @@ export const enableGift = async (book, { unlockAt = null, allowReplies = true } 
   });
 
   return token;
+};
+
+/* Packing-slip numbers for the gift page (pages stay locked to the recipient until unlockAt) */
+export const countBook = async (bookId) => {
+  const counts = { spreads: 0, photos: 0, notes: 0, letters: 0, videos: 0 };
+  const spreads = await listSpreads(bookId);
+  counts.spreads = spreads.length;
+  for (const s of spreads) {
+    (await listElements(bookId, s.id)).forEach((e) => {
+      if (e.type === "photo") counts.photos++;
+      else if (e.type === "text") counts.notes++;
+      else if (e.type === "letter") counts.letters++;
+      else if (e.type === "video") counts.videos++;
+    });
+  }
+  return counts;
 };
 
 /* Turn the link off: the old token stops working immediately */

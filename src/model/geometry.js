@@ -2,7 +2,8 @@
 // Elements store their position as fractions of ONE page (0 = left/top edge, 1 = right/bottom),
 // so a spread looks the same at any screen size. PAGE is the logical size used to convert.
 
-export const PAGE = { width: 620, height: 820 };
+// Square pages, like a 12x12 scrapbook album: a spread fills a laptop screen edge to edge.
+export const PAGE = { width: 620, height: 620 };
 
 export const clamp01 = (n) => Math.min(1, Math.max(0, Number(n) || 0));
 

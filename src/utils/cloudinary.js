@@ -7,6 +7,7 @@ const UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
 export const getMediaType = (file) => {
   if (file.type.startsWith("image/")) return "image";
   if (file.type.startsWith("video/")) return "video";
+  if (file.type.startsWith("audio/")) return "audio";
   return "document";
 };
 
@@ -14,6 +15,7 @@ const FOLDERS = {
   image: "ourspace_images",
   video: "ourspace_videos",
   document: "ourspace_documents",
+  audio: "ourspace_audio",
 };
 
 /* ---------- SINGLE UPLOAD FOR EVERY FILE TYPE ---------- */

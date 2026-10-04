@@ -4,8 +4,8 @@ A digital scrapbook that feels handmade — polaroids, handwritten notes, washi 
 sealed letters — made to be gifted to the people you love.
 
 Friends share a private **space**. Inside it they make **books** spread by spread, write letters that
-can stay sealed until a date, see every day they've kept on a timeline, and chat. Next: sending a
-book as a gift link that opens like a real envelope.
+can stay sealed until a date, see every day they've kept on a timeline, and chat. A book can be
+sent as a **gift link** that opens like a real envelope, with no login needed.
 
 ## Status
 
@@ -14,7 +14,7 @@ book as a gift link that opens like a real envelope.
 | 0 | Bug fixes, security rules, test tooling | Done |
 | 1 | New data model: books → spreads → elements | Done |
 | 2 | Redesigned screens: home, shelf, spread editor, letters, timeline | Done (old screens retired) |
-| 3 | Gift viewer: no-login link, envelope opening, time capsule | Planned |
+| 3 | Gift viewer: no-login link, envelope opening, time capsule, replies | Done |
 
 ## Tech
 
@@ -53,6 +53,7 @@ the key is restricted to the app's own domains and to the Auth and Firestore API
 | --- | --- |
 | `npm run e2e` | Drives the real app in headless Chrome: sign-up, spaces, books/spreads/elements and their access rules, gift links, sealed letters across two accounts. Needs the dev server running. Screenshots go to `e2e-output/`. |
 | `npm run e2e:editor` | Drives the new screens: home, shelf, spread editor (drag across pages, rotate, tray, undo/redo, in-place edits, delete, new spread), timeline, old-address redirects, chat. |
+| `npm run e2e:gift` | Drives the gift flow with two browsers: creator sets up the gift, a logged-out recipient sees it locked, then opens it, reads a letter and replies; the link is turned off. |
 | `npm run cleanup:qa` | Lists the test accounts the e2e run created and their data. Add `-- --yes` to delete them. Needs a Firebase service account key saved as `serviceAccountKey.json` (git-ignored). |
 | `npm run migrate:books` | Copies old-scrapbook memories into books (one book per space, one spread per day). Dry run by default; `-- --yes` writes; `-- --add-new` copies only memories not yet in the book. Needs `serviceAccountKey.json`. |
 | `npm run build` | Production build into `build/`. |
@@ -65,6 +66,7 @@ src/
   firebase.js      Firebase setup (reads .env.local)
   pages/           one file per screen
   editor/          spread editor pieces: element rendering, bottom tray
+  gift/            gift link setup (ShareGiftModal) and the read-only spread
   ui/              shared look: AppShell, paper pieces, stickers, icons, ui.css
   components/      space chat
   model/           books, spreads, elements, gift links (books.js); page fractions (geometry.js)

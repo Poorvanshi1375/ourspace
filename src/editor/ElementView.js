@@ -60,7 +60,7 @@ export default function ElementView({ el, scale, editing, onEditDone }) {
         </div>
       );
     case "letter":
-      return <LetterEnvelope title={c.title} subtitle="double-click to read" scale={scale} />;
+      return <LetterEnvelope title={c.title} subtitle="open me" scale={scale} />;
     case "document":
       return <DocCard href={c.mediaUrl} name={c.fileName} scale={scale} />;
     case "sticker":
