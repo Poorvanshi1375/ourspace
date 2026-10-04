@@ -182,9 +182,7 @@ export default function MySpacePage() {
               )}
             </div>
 
-            <p style={{ marginTop: 28, fontSize: 14 }} className="muted">
-              Looking for the old calendar, letters and gallery? <Link to="/dashboard">Open the old calendar view</Link>
-            </p>
+
           </div>
 
           <figure style={{ flex: "1 1 340px", maxWidth: 420, margin: 0, transform: "rotate(1.6deg)" }}>

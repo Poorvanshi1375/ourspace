@@ -31,13 +31,19 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.userIds == [request.auth.uid];
 
-      // Joining: you may only add yourself, nothing else changes, and the member limit holds
-      allow update: if signedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userIds'])
-        && request.resource.data.userIds.toSet().difference(resource.data.userIds.toSet())
-             == [request.auth.uid].toSet()
-        && resource.data.userIds.toSet().difference(request.resource.data.userIds.toSet()).size() == 0
-        && request.resource.data.userIds.size() <= resource.data.maxMembers;
+      allow update: if signedIn() && (
+        // Joining: only add yourself, nothing else changes, the member limit holds,
+        // and the space isn't locked by its members
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userIds'])
+          && request.resource.data.userIds.toSet().difference(resource.data.userIds.toSet())
+               == [request.auth.uid].toSet()
+          && resource.data.userIds.toSet().difference(request.resource.data.userIds.toSet()).size() == 0
+          && request.resource.data.userIds.size() <= resource.data.maxMembers
+          && resource.data.get('is_locked', false) != true)
+        // Members: rename the space, lock or unlock it to new people
+        || (request.auth.uid in resource.data.userIds
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'is_locked']))
+      );
 
       allow delete: if false;
     }

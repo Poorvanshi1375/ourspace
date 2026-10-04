@@ -41,8 +41,7 @@ const fail = (n, d = "") => { results.push(["FAIL", n, d]); console.log("FAIL", 
     await a.fill('input[name="password"]', A.pass);
     await a.click('button[type="submit"]');
     await a.waitForURL("**/space", { timeout: 30000 });
-    await a.click("text=+ Create New Space");
-    await a.click("text=Create Our Space");
+    await a.click('button:has-text("Create our space")');
     await a.waitForURL("**/home", { timeout: 30000 });
     pass("Sign up and create a space (Auth + Firestore work in production)");
 

@@ -41,11 +41,10 @@ const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
     await a.fill('input[name="password"]', A.pass);
     await a.click('button[type="submit"]');
     await a.waitForURL("**/space", { timeout: 20000 });
-    await a.click("text=+ Create New Space");
-    await a.click("text=Create Our Space");
+    await a.click('button:has-text("Create our space")');
     await a.waitForURL("**/home", { timeout: 20000 });
     await a.goto(`${BASE}/space`);
-    const code = (await a.locator("text=Space Code:").first().locator("..").innerText()).replace("Space Code:", "").trim();
+    const code = (await a.locator('[data-testid="space-code"]').first().innerText()).replace(/-/g, "").trim();
     await a.waitForFunction(() => window.__ourspace, null, { timeout: 15000 });
     const ids = await a.evaluate(async ({ code, img }) => {
       const { model: m, auth } = window.__ourspace;

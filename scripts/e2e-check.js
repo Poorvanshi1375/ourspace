@@ -57,20 +57,22 @@ async function signup(page, u) {
     await signup(a, A);
     pass("A signs up", A.email);
 
-    await a.click("text=+ Create New Space");
-    await a.waitForURL("**/space/create");
-    await a.click("text=Create Our Space");
+    await a.click('button:has-text("Create our space")');
     await a.waitForURL("**/home", { timeout: 20000 });
     pass("A creates a space and lands on the new home");
 
     await a.goto(`${BASE}/space`);
-    const codeText = await a.locator("text=Space Code:").first().locator("..").innerText();
-    const spaceCode = codeText.replace("Space Code:", "").trim();
-    check(/^[A-Z0-9]{6}$/.test(spaceCode), "Space code readable", spaceCode);
+    const shownCode = await a.locator('[data-testid="space-code"]').first().innerText();
+    const spaceCode = shownCode.replace(/-/g, "").trim();
+    check(/^[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(shownCode), "New spaces get a 10-character code", shownCode);
 
-    // ---------------- Test 1: login lands on dashboard ----------------
-    await a.goto(`${BASE}/`);
-    await a.click("button:has-text('Logout')");
+    // ---------------- Test 1: log out from the space menu, log back in ----------------
+    await a.goto(`${BASE}/home`);
+    await a.click('[data-testid="space-menu"]');
+    await a.click('[role="dialog"][aria-label="Space settings"] button:has-text("Log out")');
+    await a.waitForURL(`${BASE}/`, { timeout: 15000 });
+    await a.locator('text=Make memories they can almost hold').waitFor({ timeout: 15000 });
+    pass("Log out from the space menu lands on the new welcome page");
     await a.goto(`${BASE}/login`);
     await a.fill('input[name="email"]', A.email);
     await a.fill('input[name="password"]', A.pass);
@@ -86,10 +88,9 @@ async function signup(page, u) {
     // ---------------- Account B joins the space ----------------
     const b = await newPage(browser, "B", consoleErrors);
     await signup(b, B);
-    await b.click("text=Join Space with Code");
-    await b.waitForURL("**/space/join");
-    await b.fill('input[placeholder="Enter space code"]', spaceCode);
-    await b.click("button:has-text('Join Space')");
+    // typed the way people share it: lower case, with the dash
+    await b.fill('input[aria-label="Space code"]', shownCode.toLowerCase());
+    await b.click('button:has-text("Join space")');
     await b.waitForURL("**/home", { timeout: 20000 });
     pass("B joins A's space");
 
@@ -142,6 +143,24 @@ async function signup(page, u) {
     }, { ...made, code: spaceCode });
     check(cRead.book === "permission-denied" && cRead.elements === "permission-denied" && cRead.books === "permission-denied",
       "T7 outsider can't read the book, its elements or the space's books", JSON.stringify(cRead));
+
+    // ---------------- Space lock: no one new can join, even with the code ----------------
+    await a.goto(`${BASE}/home`);
+    await a.click('[data-testid="space-menu"]');
+    await a.locator('[role="dialog"][aria-label="Space settings"] label:has-text("Lock this space") input').click();
+    await a.locator('text=Locked: no one new can join').waitFor({ timeout: 15000 });
+    await c.goto(`${BASE}/space`);
+    await c.fill('input[aria-label="Space code"]', spaceCode);
+    await c.click('button:has-text("Join space")');
+    const refusedMsg = await c.locator('form[aria-label="Join a space"] [role="alert"]').innerText({ timeout: 15000 }).catch(() => "");
+    check(/locked/i.test(refusedMsg), "A locked space refuses new members even with the right code", refusedMsg);
+    const cStillOut = await model(c, async ({ bookId }) => {
+      try { await window.__ourspace.model.getBook(bookId); return "allowed"; } catch (e) { return e.code; }
+    }, made);
+    check(cStillOut === "permission-denied", "The refused person still can't read the space's books", cStillOut);
+    // the menu is still open from locking it
+    await a.locator('[role="dialog"][aria-label="Space settings"] label:has-text("Lock this space") input').click();
+    await a.locator('text=Unlocked').waitFor({ timeout: 15000 });
 
     // gift link, time capsule locked
     const token = await model(a, async ({ bookId }) => {
