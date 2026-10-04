@@ -7,6 +7,7 @@ import "./ui.css";
 const NAV = [
   { to: "/home", label: "My Space" },
   { to: "/books", label: "Books" },
+  { to: "/timeline", label: "Timeline" },
   { to: "/letters", label: "Letters" },
 ];
 

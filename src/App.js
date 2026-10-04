@@ -25,6 +25,7 @@ import UploadMemoryPage from "./pages/UploadMemoryPage";
 import BooksPage from "./pages/BooksPage";
 import MySpacePage from "./pages/MySpacePage";
 import LettersPage from "./pages/LettersPage";
+import TimelinePage from "./pages/TimelinePage";
 import SpreadEditorPage from "./pages/SpreadEditorPage";
 
 // ✅ NEW
@@ -211,6 +212,14 @@ export default function App() {
             }
           />
 
+          <Route
+            path="/timeline"
+            element={
+              <ProtectedRoute>
+                <TimelinePage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/letters"
             element={

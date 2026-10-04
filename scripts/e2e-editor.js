@@ -161,6 +161,19 @@ const check = (c, n, d) => (c ? pass(n, d) : fail(n, d));
     await page.waitForFunction(() => /Spread 2/.test(document.body.innerText), null, { timeout: 15000 });
     check(true, "New spread added and opened");
     await shot("4-new-spread");
+
+    // ---- timeline ----
+    await page.goto(`${BASE}/timeline`);
+    await page.locator(`[data-entry="${ids.bookId}/${ids.spreadId}"]`).waitFor({ timeout: 20000 });
+    await page.waitForTimeout(1000);
+    check((await page.locator('[data-testid="year"]').innerText()) === "2025", "Timeline opens on the latest year with dated spreads");
+    const entryText = await page.locator(`[data-entry="${ids.bookId}/${ids.spreadId}"]`).innerText();
+    check(/Day out in Mumbai/.test(entryText) && /1 photo/.test(entryText) && /April/.test(await page.locator("main").innerText()),
+      "Timeline shows the spread under April with its photo count", entryText.replace(/\s+/g, " ").slice(0, 120));
+    await shot("5-timeline");
+    await page.click(`[data-entry="${ids.bookId}/${ids.spreadId}"] >> text=Open this spread`);
+    await page.locator('[data-testid="spread"]').waitFor({ timeout: 15000 });
+    pass("Timeline entry opens its spread in the editor");
   } catch (e) {
     fail("Script error", e.message.split("\n")[0]);
     await shot("error").catch(() => {});
