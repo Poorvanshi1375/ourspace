@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Logo } from "./icons";
 import ScrapbookChat from "../components/ScrapbookChat";
+import SpaceMenu from "./SpaceMenu";
 import "./ui.css";
 
 const NAV = [
@@ -33,6 +34,7 @@ export default function AppShell({ children }) {
               </NavLink>
             ))}
           </nav>
+          <SpaceMenu />
         </div>
       </header>
       {children}

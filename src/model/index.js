@@ -2,3 +2,4 @@
 export * from "./books";
 export * from "./geometry";
 export * from "./letters";
+export * from "./spaces";

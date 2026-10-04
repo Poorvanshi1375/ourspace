@@ -10,13 +10,11 @@ import {
 import { AuthProvider, useAuth } from "./auth";
 
 // Pages
-import HomePage from "./pages/HomePage";
+import WelcomePage from "./pages/WelcomePage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ProfilePage from "./pages/ProfilePage";
 import SpaceChoicePage from "./pages/SpaceChoicePage";
-import CreateSpacePage from "./pages/CreateSpacePage";
-import JoinSpacePage from "./pages/JoinSpacePage";
 import MySpacePage from "./pages/MySpacePage";
 import BooksPage from "./pages/BooksPage";
 import SpreadEditorPage from "./pages/SpreadEditorPage";
@@ -73,7 +71,7 @@ export default function App() {
       <Router>
         <Routes>
           {/* Public */}
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<WelcomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           {/* A gift opens without login */}
@@ -84,8 +82,8 @@ export default function App() {
 
           {/* Space setup */}
           <Route path="/space" element={Protected(<SpaceChoicePage />)} />
-          <Route path="/space/create" element={Protected(<CreateSpacePage />)} />
-          <Route path="/space/join" element={Protected(<JoinSpacePage />)} />
+          <Route path="/space/create" element={<Navigate to="/space" replace />} />
+          <Route path="/space/join" element={<Navigate to="/space" replace />} />
 
           {/* Main app */}
           <Route path="/home" element={Protected(<MySpacePage />)} />

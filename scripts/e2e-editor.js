@@ -41,11 +41,10 @@ const check = (c, n, d) => (c ? pass(n, d) : fail(n, d));
     await page.fill('input[name="password"]', A.pass);
     await page.click('button[type="submit"]');
     await page.waitForURL("**/space", { timeout: 20000 });
-    await page.click("text=+ Create New Space");
-    await page.click("text=Create Our Space");
+    await page.click('button:has-text("Create our space")');
     await page.waitForURL("**/home", { timeout: 20000 });
     await page.goto(`${BASE}/space`);
-    const code = (await page.locator("text=Space Code:").first().locator("..").innerText()).replace("Space Code:", "").trim();
+    const code = (await page.locator('[data-testid="space-code"]').first().innerText()).replace(/-/g, "").trim();
 
     // ---- a test book with one of each main element ----
     const ids = await model(async ({ code, img }) => {
