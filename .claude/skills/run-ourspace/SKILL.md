@@ -57,6 +57,11 @@ wait for `**/dashboard`) and add your steps.
 `.moveable-rotation-control` for the rotate handle, `[role=toolbar][aria-label="Selected item"]`.
 Click an element once to select it before dragging (Moveable attaches to the selection).
 
+**Gift flow:** `npm run e2e:gift` uses two browser contexts: the creator (logged in) and a
+recipient with no login opening `/gift/<token>`. The link comes from `[data-testid=gift-link]`
+in the Share gift dialog; the seal is `button[aria-label="Break the seal to open your gift"]`
+(disabled while sealed), the reader spread is `[data-testid=gift-spread]`.
+
 ## 3. Clean up test data
 
 QA accounts and everything they created stay in `ourspace-dev`. Remove them with:

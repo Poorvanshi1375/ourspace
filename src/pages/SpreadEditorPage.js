@@ -7,6 +7,7 @@ import * as M from "../model";
 import { uploadMedia } from "../utils/cloudinary";
 import ElementView, { KEEPS_RATIO } from "../editor/ElementView";
 import Tray from "../editor/Tray";
+import ShareGiftModal, { giftUrl } from "../gift/ShareGiftModal";
 import {
   IconBack,
   IconUndo,
@@ -43,6 +44,9 @@ export default function SpreadEditorPage() {
   const [saveError, setSaveError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [stage, setStage] = useState({ w: 1200, h: 800 });
+  const [shareOpen, setShareOpen] = useState(false);
+  const [replies, setReplies] = useState([]);
+  const [repliesOpen, setRepliesOpen] = useState(false);
 
   // undo/redo lives in a ref (updaters must stay pure); `bump` re-renders the buttons
   const history = useRef({ undo: [], redo: [] });
@@ -62,6 +66,10 @@ export default function SpreadEditorPage() {
   }, [bookId]);
 
   const wanted = params.get("spread");
+  // notes and hearts left by the gift's recipient
+  useEffect(() => M.subscribeReplies(bookId, setReplies, () => setReplies([])), [bookId]);
+  const refreshBook = () => M.getBook(bookId).then((b) => b && setBook(b));
+
   const spreadId = (wanted && spreads?.some((s) => s.id === wanted) ? wanted : spreads?.[0]?.id) || null;
   const spreadIndex = spreads ? spreads.findIndex((s) => s.id === spreadId) : -1;
   const spread = spreadIndex > -1 ? spreads[spreadIndex] : null;
@@ -347,8 +355,21 @@ export default function SpreadEditorPage() {
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
-            <button className="ui-btn ui-btn-outline" disabled title="Arrives with the gift viewer"><IconEye size={16} /> Preview</button>
-            <button className="ui-btn ui-btn-primary" disabled title="Arrives with the gift viewer"><IconGift size={16} /> Share gift</button>
+            {replies.length > 0 && (
+              <button className="ui-btn ui-btn-outline" onClick={() => setRepliesOpen(true)}>
+                ♡ {replies.length} {replies.length === 1 ? "reply" : "replies"}
+              </button>
+            )}
+            <button
+              className="ui-btn ui-btn-outline"
+              onClick={() => (book.giftEnabled && book.giftToken ? window.open(giftUrl(book.giftToken), "_blank", "noopener") : setShareOpen(true))}
+              title={book.giftEnabled ? "Open the gift link in a new tab" : "Set up the gift link first"}
+            >
+              <IconEye size={16} /> Preview
+            </button>
+            <button className="ui-btn ui-btn-primary" onClick={() => setShareOpen(true)}>
+              <IconGift size={16} /> {book.giftEnabled ? "Gift settings" : "Share gift"}
+            </button>
           </div>
         </div>
       </header>
@@ -495,6 +516,33 @@ export default function SpreadEditorPage() {
       </main>
 
       {spread && <Tray onAdd={addElement} onUpload={onUpload} uploading={uploading} />}
+
+      {shareOpen && (
+        <ShareGiftModal book={book} onClose={() => setShareOpen(false)} onSaved={refreshBook} />
+      )}
+
+      {repliesOpen && (
+        <div role="dialog" aria-label="Replies" onClick={() => setRepliesOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(43,48,38,.45)", display: "grid", placeItems: "center", zIndex: 200000, padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--paper)", maxWidth: 560, width: "100%", maxHeight: "80vh", overflow: "auto", padding: "26px 28px", borderRadius: 16 }}>
+            <h2 className="font-title" style={{ margin: 0, fontSize: 28 }}>Notes from {book.recipient?.name || "your recipient"}</h2>
+            <ul style={{ listStyle: "none", padding: 0, margin: "16px 0 0", display: "flex", flexDirection: "column", gap: 12 }}>
+              {[...replies].reverse().map((r) => {
+                const sp = spreads.find((x) => x.id === r.spreadId);
+                return (
+                  <li key={r.id} style={{ background: "#E9F1DD", padding: "12px 16px", borderRadius: 6, transform: `rotate(${r.id.charCodeAt(0) % 2 ? -0.8 : 0.8}deg)` }}>
+                    <div className="font-hand" style={{ fontSize: 24, lineHeight: 1.1 }}>{r.reaction === "heart" && !r.text ? "♡ loved this page" : r.text}</div>
+                    <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                      {r.name || "them"} · {sp ? `on “${sp.title}”` : "on the book"}
+                      {r.createdAt?.toDate ? ` · ${r.createdAt.toDate().toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <button className="ui-btn ui-btn-primary" style={{ marginTop: 18 }} onClick={() => setRepliesOpen(false)}>Close</button>
+          </div>
+        </div>
+      )}
 
       {/* ---------- reading a letter ---------- */}
       {preview && (

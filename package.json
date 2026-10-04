@@ -23,7 +23,8 @@
     "cleanup:qa": "node scripts/cleanup-qa-data.js",
     "e2e": "node scripts/e2e-check.js",
     "migrate:books": "node scripts/migrate-memories-to-books.js",
-    "e2e:editor": "node scripts/e2e-editor.js"
+    "e2e:editor": "node scripts/e2e-editor.js",
+    "e2e:gift": "node scripts/e2e-gift.js"
   },
   "eslintConfig": {
     "extends": [

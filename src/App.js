@@ -22,6 +22,7 @@ import BooksPage from "./pages/BooksPage";
 import SpreadEditorPage from "./pages/SpreadEditorPage";
 import LettersPage from "./pages/LettersPage";
 import TimelinePage from "./pages/TimelinePage";
+import GiftPage from "./pages/GiftPage";
 
 /* ---------- PROTECTED ROUTE ---------- */
 function ProtectedRoute({ children }) {
@@ -75,6 +76,8 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          {/* A gift opens without login */}
+          <Route path="/gift/:token" element={<GiftPage />} />
 
           {/* Decides home vs space setup */}
           <Route path="/app" element={Protected(<SpaceGate />)} />
