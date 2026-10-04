@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import * as M from "../model";
+import { PAGE } from "../model";
 import BookSpread from "../gift/BookSpread";
 import { IconPrev, IconNext, IconHeartFill } from "../ui/icons";
 import "../ui/ui.css";
@@ -258,7 +259,7 @@ export default function GiftPage() {
   };
 
   // the open book fits the window (room above for the title, below for the controls)
-  const pw = Math.max(260, Math.min(560, (view.w - 200) / 2, ((view.h - 260) * 620) / 820));
+  const pw = Math.max(260, Math.min(560, (view.w - 200) / 2, ((view.h - 260) * PAGE.width) / PAGE.height));
 
   return (
     <div className="ui-root" style={{ position: "relative", overflowX: "hidden" }}>
@@ -358,7 +359,7 @@ export default function GiftPage() {
               {elements[spread.id] ? (
                 <BookSpread elements={elements[spread.id]} pageWidth={pw} pageNumber={index * 2 + 1} onOpenLetter={setLetter} />
               ) : (
-                <div style={{ width: pw * 2, height: (pw * 820) / 620, display: "grid", placeItems: "center" }} className="muted">turning the page…</div>
+                <div style={{ width: pw * 2, height: (pw * PAGE.height) / PAGE.width, display: "grid", placeItems: "center" }} className="muted">turning the page…</div>
               )}
             </div>
             <button className="ui-icon-btn" aria-label="Next pages" disabled={index >= spreads.length - 1} onClick={() => setIndex((i) => i + 1)} style={{ width: 48, height: 48, borderRadius: 999, border: "1px solid var(--line)", background: "var(--paper)" }}>

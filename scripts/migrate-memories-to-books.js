@@ -40,7 +40,7 @@ const ONLY_SPACE = (() => {
 
 // The old scrapbook was one wide canvas; treat it as a two-page spread of this size.
 const PAGE_W = 620;
-const PAGE_H = 820;
+const PAGE_H = 620; // pages are square (see src/model/geometry.js)
 
 const keyPath = path.join(__dirname, "..", "serviceAccountKey.json");
 initializeApp({
