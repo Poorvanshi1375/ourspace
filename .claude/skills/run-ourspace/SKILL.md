@@ -49,6 +49,12 @@ For a one-off interaction, copy the login block from `scripts/e2e-check.js`
 (fill `input[name="email"]` / `input[name="password"]`, click `button[type="submit"]`,
 wait for `**/dashboard`) and add your steps.
 
+**Spread editor:** `npm run e2e:editor` (scripts/e2e-editor.js) builds a test book through
+`window.__ourspace`, then drives `/books` and `/books/:id` with real pointer input. Selectors:
+`[data-book=id]` shelf cards, `[data-testid=spread]`, `[data-el=id]` / `[data-type=…]` elements,
+`.moveable-rotation-control` for the rotate handle, `[role=toolbar][aria-label="Selected item"]`.
+Click an element once to select it before dragging (Moveable attaches to the selection).
+
 ## 3. Clean up test data
 
 QA accounts and everything they created stay in `ourspace-dev`. Remove them with:

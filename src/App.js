@@ -22,6 +22,8 @@ import ReadNotePage from "./pages/ReadNotePage";
 import CameraPage from "./pages/CameraPage";
 import NewMemoryPage from "./pages/NewMemoryPage";
 import UploadMemoryPage from "./pages/UploadMemoryPage";
+import BooksPage from "./pages/BooksPage";
+import SpreadEditorPage from "./pages/SpreadEditorPage";
 
 // ✅ NEW
 import SpaceChoicePage from "./pages/SpaceChoicePage";
@@ -193,6 +195,24 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <UploadMemoryPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Books (redesign) */}
+          <Route
+            path="/books"
+            element={
+              <ProtectedRoute>
+                <BooksPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/books/:bookId"
+            element={
+              <ProtectedRoute>
+                <SpreadEditorPage />
               </ProtectedRoute>
             }
           />

@@ -12,8 +12,8 @@ spread and send as a gift link that opens like a real envelope.
 | Phase | What | State |
 | --- | --- | --- |
 | 0 | Bug fixes, security rules, test tooling | Done |
-| 1 | New data model: books → spreads → elements | In progress |
-| 2 | Redesigned screens (pistachio + off-white, handwritten type) | Planned |
+| 1 | New data model: books → spreads → elements | Done |
+| 2 | Redesigned screens (pistachio + off-white, handwritten type) | In progress: shelf + spread editor at `/books` |
 | 3 | Gift viewer: no-login link, envelope opening, time capsule | Planned |
 
 ## Tech
@@ -21,7 +21,7 @@ spread and send as a gift link that opens like a real envelope.
 - React 19 (Create React App), React Router 7
 - Firebase Authentication (email + Google) and Cloud Firestore
 - Cloudinary for photo, video and document uploads
-- interact.js for dragging items on the scrapbook canvas
+- react-moveable for drag / resize / rotate in the spread editor (interact.js on the old scrapbook)
 
 ## Run it locally
 
@@ -51,6 +51,7 @@ the key is restricted to the app's own domains and to the Auth and Firestore API
 | Command | What it does |
 | --- | --- |
 | `npm run e2e` | Drives the real app in headless Chrome: sign-up, spaces, scrapbook drag/rotate/delete, shared letters vs private drafts. Needs the dev server running. Screenshots go to `e2e-output/`. |
+| `npm run e2e:editor` | Drives the Spread Editor: shelf, drag across pages, rotate, tray stickers, undo/redo, in-place text edits, delete, new spread. |
 | `npm run cleanup:qa` | Lists the test accounts the e2e run created and their data. Add `-- --yes` to delete them. Needs a Firebase service account key saved as `serviceAccountKey.json` (git-ignored). |
 | `npm run migrate:books` | Copies existing memories into books (one book per space, one spread per day). Dry run by default; add `-- --yes` to write. Needs `serviceAccountKey.json`. |
 | `npm run build` | Production build into `build/`. |
@@ -61,7 +62,9 @@ the key is restricted to the app's own domains and to the Auth and Firestore API
 src/
   auth.js          login state, current profile, active space
   firebase.js      Firebase setup (reads .env.local)
-  pages/           one file per screen
+  pages/           one file per screen (BooksPage, SpreadEditorPage are the redesigned ones)
+  editor/          spread editor pieces: element rendering, bottom tray
+  ui/              shared look: AppShell, paper pieces, stickers, icons, ui.css
   components/      scrapbook menu, chat, add-item modals
   model/           books, spreads, elements, gift links (books.js); page fractions (geometry.js)
   utils/           uploads (cloudinary.js), space and date helpers (space.js)

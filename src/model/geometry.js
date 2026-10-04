@@ -6,6 +6,9 @@ export const PAGE = { width: 620, height: 820 };
 
 export const clamp01 = (n) => Math.min(1, Math.max(0, Number(n) || 0));
 
+/* Positions may overhang their page (a photo straddling the spine): -1 .. 1 */
+export const clampPos = (n) => Math.min(1, Math.max(-1, Number(n) || 0));
+
 /* Fractions -> pixels for a page rendered at `pageWidth` (height follows the page ratio) */
 export const toPixels = (el, pageWidth = PAGE.width) => {
   const pageHeight = (pageWidth * PAGE.height) / PAGE.width;

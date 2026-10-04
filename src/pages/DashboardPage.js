@@ -204,6 +204,13 @@ export default function DashboardPage() {
         <div className="planner-actions">
           <button
             className="os-btn os-btn-primary"
+            onClick={() => navigate("/books")}
+          >
+            📖 Our books (new)
+          </button>
+
+          <button
+            className="os-btn os-btn-primary"
             onClick={() =>
               requireDate(() =>
                 navigate("/memory/new", {
