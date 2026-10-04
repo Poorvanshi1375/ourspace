@@ -219,3 +219,15 @@
   pointer-events: none;
   z-index: 100000;
 }
+
+/* ---------- turning pages ---------- */
+@keyframes ui-flip-next { from { transform: perspective(2600px) rotateY(0deg); } to { transform: perspective(2600px) rotateY(-180deg); } }
+@keyframes ui-flip-prev { from { transform: perspective(2600px) rotateY(0deg); } to { transform: perspective(2600px) rotateY(180deg); } }
+@keyframes ui-peel-next { from { transform: perspective(1800px) rotateY(0deg); opacity: 1; } 70% { opacity: 1; } to { transform: perspective(1800px) rotateY(-100deg); opacity: 0; } }
+@keyframes ui-peel-prev { from { transform: perspective(1800px) rotateY(0deg); opacity: 1; } 70% { opacity: 1; } to { transform: perspective(1800px) rotateY(100deg); opacity: 0; } }
+@keyframes ui-flip-shade { from { opacity: 0; } to { opacity: 1; } }
+.ui-page-corner { transition: width .18s ease, height .18s ease, top .18s ease, left .18s ease, opacity .18s; opacity: .85; }
+.ui-page-corner:hover, .ui-page-corner:focus-visible { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  [style*="ui-flip-"], [style*="ui-peel-"] { animation-duration: 1ms !important; }
+}

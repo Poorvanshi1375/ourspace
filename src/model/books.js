@@ -215,6 +215,7 @@ export const updateElement = (bookId, spreadId, elementId, patch) => {
   if ("h" in patch) clean.h = patch.h == null ? null : clamp01(patch.h);
   if ("rotate" in patch) clean.rotate = Math.max(-180, Math.min(180, Number(patch.rotate) || 0));
   if ("page" in patch) clean.page = patch.page === "right" ? "right" : "left";
+  if ("locked" in patch) clean.locked = !!patch.locked; // locked items can't be moved, resized, edited or deleted
   ["z", "style", "content"].forEach((k) => {
     if (k in patch) clean[k] = patch[k];
   });

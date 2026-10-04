@@ -8,6 +8,8 @@ import { uploadMedia } from "../utils/cloudinary";
 import ElementView, { KEEPS_RATIO } from "../editor/ElementView";
 import Tray from "../editor/Tray";
 import ShareGiftModal, { giftUrl } from "../gift/ShareGiftModal";
+import BookSpread from "../gift/BookSpread";
+import { usePageTurn, PageFlip, PageCorners, PAGE_TURN_HINT } from "../ui/pageTurn";
 import {
   IconBack,
   IconUndo,
@@ -21,10 +23,21 @@ import {
   IconTrash,
   IconEye,
   IconGift,
+  IconLock,
+  IconUnlock,
 } from "../ui/icons";
 import "../ui/ui.css";
 
 const GUTTER = 28; // space beside the book for page edges and shadows
+
+const HINT_KEY = "ourspace.pageTurnHintSeen";
+const hintSeen = () => {
+  try {
+    return localStorage.getItem(HINT_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
 
 const pick = (el) => ({ page: el.page, x: el.x, y: el.y, w: el.w, rotate: el.rotate || 0, z: el.z || 0 });
 
@@ -47,6 +60,7 @@ export default function SpreadEditorPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [replies, setReplies] = useState([]);
   const [repliesOpen, setRepliesOpen] = useState(false);
+  const [showHint, setShowHint] = useState(() => !hintSeen());
 
   // undo/redo lives in a ref (updaters must stay pure); `bump` re-renders the buttons
   const history = useRef({ undo: [], redo: [] });
@@ -193,10 +207,18 @@ export default function SpreadEditorPage() {
   };
 
   const removeSelected = () => {
-    if (!selected) return;
+    if (!selected || selected.locked) return;
     push({ kind: "delete", id: selected.id });
     save(M.deleteElement(bookId, spreadId, selected.id));
     setSelectedId(null);
+  };
+
+  // like Canva: a locked item stays put until it's unlocked
+  const toggleLock = (el) => {
+    const locked = !el.locked;
+    push({ kind: "change", id: el.id, before: { locked: !!el.locked }, after: { locked } });
+    setElements((list) => list.map((e) => (e.id === el.id ? { ...e, locked } : e)));
+    save(M.updateElement(bookId, spreadId, el.id, { locked }));
   };
 
   const duplicateSelected = () =>
@@ -227,6 +249,35 @@ export default function SpreadEditorPage() {
 
   /* ---------- spreads ---------- */
   const goTo = (i) => spreads?.[i] && setParams({ spread: spreads[i].id });
+  // turn pages like a book: swipe the page, scroll sideways, arrow keys, or the folded corners
+  const pages = usePageTurn({
+    canNext: !!spreads && spreadIndex > -1 && spreadIndex < spreads.length - 1,
+    canPrev: spreadIndex > 0,
+    onNext: () => goTo(spreadIndex + 1),
+    onPrev: () => goTo(spreadIndex - 1),
+    front: (dir) => (
+      <BookSpread ghost elements={elements} pageWidth={pw} only={dir === "next" ? "right" : "left"} pageNumber={spreadIndex * 2 + (dir === "next" ? 2 : 1)} />
+    ),
+    wheelVertical: true,
+    swipeFrom: (e) => !!e.target.dataset?.page || e.target.dataset?.testid === "spread" || e.target.tagName === "MAIN",
+    keys: () => !selectedId && !editingId && !shareOpen && !preview && !repliesOpen,
+  });
+  const turnRef = pages.ref;
+  const mainRef = useCallback(
+    (node) => {
+      stageRef(node);
+      turnRef(node);
+    },
+    [stageRef, turnRef]
+  );
+  useEffect(() => {
+    if (!pages.flip || !showHint) return;
+    setShowHint(false);
+    try {
+      localStorage.setItem(HINT_KEY, "1");
+    } catch {}
+  }, [pages.flip, showHint]);
+
   const addSpread = async () => {
     const last = spreads[spreads.length - 1];
     const id = await M.createSpread(bookId, user.uid, { title: "New spread", order: (last?.order || 0) + 1 });
@@ -248,6 +299,9 @@ export default function SpreadEditorPage() {
       } else if (mod && e.key.toLowerCase() === "y") {
         e.preventDefault();
         redo();
+      } else if (e.altKey && e.shiftKey && e.code === "KeyL" && selected) {
+        e.preventDefault();
+        toggleLock(selected);
       } else if (e.key === "Escape") {
         setSelectedId(null);
       }
@@ -298,9 +352,10 @@ export default function SpreadEditorPage() {
     return <div className="ui-root" style={{ padding: 40 }}>Opening your book…</div>;
   }
 
-  const target = selectedId && !editingId ? document.querySelector(`[data-el="${selectedId}"]`) : null;
+  const target = selectedId && !editingId && !selected?.locked ? document.querySelector(`[data-el="${selectedId}"]`) : null;
   const selG = selected ? toGlobal(selected) : null;
-  const selH = target ? target.offsetHeight : 0;
+  const selNode = selectedId && !editingId ? document.querySelector(`[data-el="${selectedId}"]`) : null;
+  const selH = selNode ? selNode.offsetHeight : 0; // locked items have no handles but still need the toolbar below them
   const canUndo = history.current.undo.length > 0;
   const canRedo = history.current.redo.length > 0;
 
@@ -345,11 +400,11 @@ export default function SpreadEditorPage() {
               <button className="ui-icon-btn" aria-label="Redo" onClick={redo} disabled={!canRedo}><IconRedo /></button>
             </div>
             <div style={{ display: "flex", alignItems: "center", background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 12, padding: 2 }}>
-              <button className="ui-icon-btn" aria-label="Previous spread" onClick={() => goTo(spreadIndex - 1)} disabled={spreadIndex <= 0}><IconPrev /></button>
-              <span style={{ fontSize: 14, fontWeight: 600, padding: "0 6px", whiteSpace: "nowrap" }}>
+              <button className="ui-icon-btn" aria-label="Previous spread" onClick={() => pages.turn("prev")} disabled={spreadIndex <= 0}><IconPrev /></button>
+              <span title={PAGE_TURN_HINT} style={{ fontSize: 14, fontWeight: 600, padding: "0 6px", whiteSpace: "nowrap" }}>
                 Spread {spreadIndex + 1} <span className="muted" style={{ fontWeight: 400 }}>of {spreads.length}</span>
               </span>
-              <button className="ui-icon-btn" aria-label="Next spread" onClick={() => goTo(spreadIndex + 1)} disabled={spreadIndex >= spreads.length - 1}><IconNext /></button>
+              <button className="ui-icon-btn" aria-label="Next spread" onClick={() => pages.turn("next")} disabled={spreadIndex >= spreads.length - 1}><IconNext /></button>
             </div>
             <button className="ui-btn ui-btn-outline" onClick={addSpread}><IconPlus size={16} /> New spread</button>
           </div>
@@ -377,7 +432,7 @@ export default function SpreadEditorPage() {
       {/* ---------- the book ---------- */}
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
       {spread && <Tray onAdd={addElement} onUpload={onUpload} uploading={uploading} />}
-      <main ref={stageRef} style={{ flex: 1, minWidth: 0, minHeight: 0, padding: "6px 0 8px", overflow: "auto" }}>
+      <main ref={mainRef} style={{ flex: 1, minWidth: 0, minHeight: 0, padding: "6px 0 8px", overflow: "auto", position: "relative", overscrollBehaviorX: "none" }}>
         {!spread ? (
           <div style={{ textAlign: "center", padding: 60 }}>
             <p className="font-hand" style={{ fontSize: 30 }}>This book has no pages yet.</p>
@@ -392,7 +447,7 @@ export default function SpreadEditorPage() {
                 setSelectedId(null);
               }
             }}
-            style={{ position: "relative", width: pw * 2, height: ph, margin: "0 auto" }}
+            style={{ position: "relative", width: pw * 2, height: ph, margin: "0 auto", userSelect: "none" }}
           >
             <div className="ui-page left" data-page="left" style={{ left: 0, width: pw, height: ph }} />
             <div className="ui-page right" data-page="right" style={{ left: pw, width: pw, height: ph }} />
@@ -415,7 +470,9 @@ export default function SpreadEditorPage() {
                     if (editingId && editingId !== el.id) finishEditing();
                     setSelectedId(el.id);
                   }}
+                  title={el.locked ? "Locked. Select it and press Unlock to move it" : undefined}
                   onDoubleClick={() => {
+                    if (el.locked) return;
                     if (el.type === "letter") setPreview(el);
                     else if (["text", "photo", "video"].includes(el.type)) setEditingId(el.id);
                   }}
@@ -426,7 +483,9 @@ export default function SpreadEditorPage() {
                     width: g.w,
                     transform: `translate(${g.gx}px, ${g.gy}px) rotate(${g.rotate}deg)`,
                     zIndex: i + 1,
-                    cursor: editingId === el.id ? "text" : "grab",
+                    cursor: editingId === el.id ? "text" : el.locked ? "default" : "grab",
+                    outline: el.locked && selectedId === el.id ? "2px dashed var(--pistachio-700)" : "none",
+                    outlineOffset: 4,
                     userSelect: "none",
                     touchAction: "none",
                   }}
@@ -443,6 +502,11 @@ export default function SpreadEditorPage() {
                       }
                     }}
                   />
+                  {el.locked && selectedId === el.id && (
+                    <span data-testid="lock-badge" aria-hidden="true" style={{ position: "absolute", right: -12, top: -12, width: 24, height: 24, borderRadius: 999, background: "var(--pistachio-700)", color: "#fff", display: "grid", placeItems: "center", boxShadow: "0 2px 6px rgba(0,0,0,.2)" }}>
+                      <IconLock size={13} />
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -467,9 +531,18 @@ export default function SpreadEditorPage() {
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
               >
-                <button className="ui-icon-btn" style={{ color: "#fff" }} aria-label="Bring to front" title="Bring to front" onClick={() => changeElement(selected, { z: maxZ + 1 })}><IconForward size={16} /></button>
-                <button className="ui-icon-btn" style={{ color: "#fff" }} aria-label="Duplicate" title="Duplicate" onClick={duplicateSelected}><IconCopy size={16} /></button>
-                <button className="ui-icon-btn" style={{ color: "#f2a7a0" }} aria-label="Delete" title="Delete" onClick={removeSelected}><IconTrash size={16} /></button>
+                {selected.locked ? (
+                  <button className="ui-btn" style={{ color: "#fff", background: "transparent", minHeight: 36, padding: "4px 12px", fontSize: 13 }} aria-label="Unlock" title="Unlock (Alt+Shift+L)" onClick={() => toggleLock(selected)}>
+                    <IconUnlock size={15} /> Locked · Unlock
+                  </button>
+                ) : (
+                  <>
+                    <button className="ui-icon-btn" style={{ color: "#fff" }} aria-label="Bring to front" title="Bring to front" onClick={() => changeElement(selected, { z: maxZ + 1 })}><IconForward size={16} /></button>
+                    <button className="ui-icon-btn" style={{ color: "#fff" }} aria-label="Duplicate" title="Duplicate" onClick={duplicateSelected}><IconCopy size={16} /></button>
+                    <button className="ui-icon-btn" style={{ color: "#fff" }} aria-label="Lock" title="Lock in place (Alt+Shift+L)" onClick={() => toggleLock(selected)}><IconLock size={16} /></button>
+                    <button className="ui-icon-btn" style={{ color: "#f2a7a0" }} aria-label="Delete" title="Delete" onClick={removeSelected}><IconTrash size={16} /></button>
+                  </>
+                )}
               </div>
             )}
 
@@ -513,7 +586,13 @@ export default function SpreadEditorPage() {
               }}
               onRotateEnd={({ lastEvent }) => lastEvent && commit()}
             />
+
+            <PageCorners pw={pw} ph={ph} canNext={spreadIndex < spreads.length - 1} canPrev={spreadIndex > 0} onTurn={pages.turn} />
+            <PageFlip flip={pages.flip} pw={pw} ph={ph} onDone={pages.endFlip} />
           </div>
+        )}
+        {spread && showHint && spreads.length > 1 && (
+          <p className="muted" style={{ position: "absolute", left: 0, right: 0, bottom: 0, margin: 0, textAlign: "center", fontSize: 12, pointerEvents: "none" }}>{PAGE_TURN_HINT}</p>
         )}
       </main>
       </div>

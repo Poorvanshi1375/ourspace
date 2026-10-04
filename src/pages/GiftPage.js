@@ -6,6 +6,7 @@ import * as M from "../model";
 import { PAGE } from "../model";
 import BookSpread from "../gift/BookSpread";
 import { IconPrev, IconNext, IconHeartFill } from "../ui/icons";
+import { usePageTurn, PageFlip, PageCorners, PAGE_TURN_HINT } from "../ui/pageTurn";
 import "../ui/ui.css";
 
 const fmtDay = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }).toUpperCase();
@@ -231,6 +232,46 @@ export default function GiftPage() {
     });
   }, [stage, index, book, spreads, elements]);
 
+  const narrow = view.w < 760; // a phone, or a very narrow window
+  // the open book fits the window (room above for the title, below for the controls)
+  const pw = narrow
+    ? Math.min(560, view.w - 32)
+    : Math.max(260, Math.min(560, (view.w - 200) / 2, ((view.h - 260) * PAGE.width) / PAGE.height));
+  const envScale = narrow ? Math.min(0.921, (view.w - 32) / 760) : 0.921;
+  const coverW = Math.min(420, view.w * 0.86);
+
+  // page turning: whole spreads on a laptop, single pages on a phone
+  const atStart = index === 0 && (!narrow || side === "left");
+  const atEnd = index >= spreads.length - 1 && (!narrow || side === "right");
+  const goPrev = () => {
+    if (narrow && side === "right") return setSide("left");
+    if (index > 0) {
+      setIndex((i) => i - 1);
+      setSide("right");
+    }
+  };
+  const goNext = () => {
+    if (narrow && side === "left") return setSide("right");
+    if (index < spreads.length - 1) {
+      setIndex((i) => i + 1);
+      setSide("left");
+    }
+  };
+
+  const pages = usePageTurn({
+    canNext: stage === "read" && !atEnd,
+    canPrev: stage === "read" && !atStart,
+    onNext: goNext,
+    onPrev: goPrev,
+    front: (dir) => {
+      const els = spread && elements[spread.id];
+      if (!els) return null;
+      const page = narrow ? side : dir === "next" ? "right" : "left";
+      return <BookSpread ghost elements={els} pageWidth={pw} only={page} pageNumber={index * 2 + (page === "right" ? 2 : 1)} />;
+    },
+    keys: () => !letter,
+  });
+
   if (state.loading) {
     return <div className="ui-root" style={{ display: "grid", placeItems: "center" }}><p className="font-hand" style={{ fontSize: 28 }}>a little something is on its way…</p></div>;
   }
@@ -260,32 +301,6 @@ export default function GiftPage() {
       audio.current.play().catch(() => {});
     }
     setStage("cover");
-  };
-
-  const narrow = view.w < 760; // a phone, or a very narrow window
-  // the open book fits the window (room above for the title, below for the controls)
-  const pw = narrow
-    ? Math.min(560, view.w - 32)
-    : Math.max(260, Math.min(560, (view.w - 200) / 2, ((view.h - 260) * PAGE.width) / PAGE.height));
-  const envScale = narrow ? Math.min(0.921, (view.w - 32) / 760) : 0.921;
-  const coverW = Math.min(420, view.w * 0.86);
-
-  // page turning: whole spreads on a laptop, single pages on a phone
-  const atStart = index === 0 && (!narrow || side === "left");
-  const atEnd = index >= spreads.length - 1 && (!narrow || side === "right");
-  const goPrev = () => {
-    if (narrow && side === "right") return setSide("left");
-    if (index > 0) {
-      setIndex((i) => i - 1);
-      setSide("right");
-    }
-  };
-  const goNext = () => {
-    if (narrow && side === "left") return setSide("right");
-    if (index < spreads.length - 1) {
-      setIndex((i) => i + 1);
-      setSide("left");
-    }
   };
 
   return (
@@ -388,11 +403,11 @@ export default function GiftPage() {
           <h1 className="font-title" style={{ margin: "0 0 18px", fontSize: narrow ? 24 : 30, textAlign: "center" }}>{spread.title}</h1>
           <div style={{ display: "flex", alignItems: "center", gap: 20, justifyContent: "center" }}>
             {!narrow && (
-              <button className="ui-icon-btn" aria-label="Previous pages" disabled={atStart} onClick={goPrev} style={{ width: 48, height: 48, borderRadius: 999, border: "1px solid var(--line)", background: "var(--paper)" }}>
+              <button className="ui-icon-btn" aria-label="Previous pages" disabled={atStart} onClick={() => pages.turn("prev")} style={{ width: 48, height: 48, borderRadius: 999, border: "1px solid var(--line)", background: "var(--paper)" }}>
                 <IconPrev size={20} />
               </button>
             )}
-            <div key={`${spread.id}-${narrow ? side : "both"}`} className="gift-turn">
+            <div ref={pages.ref} className="gift-turn" style={{ position: "relative", touchAction: "pan-y", userSelect: "none" }}>
               {elements[spread.id] ? (
                 <BookSpread
                   elements={elements[spread.id]}
@@ -404,21 +419,26 @@ export default function GiftPage() {
               ) : (
                 <div style={{ width: narrow ? pw : pw * 2, height: (pw * PAGE.height) / PAGE.width, display: "grid", placeItems: "center" }} className="muted">turning the page…</div>
               )}
+              <PageCorners pw={pw} ph={(pw * PAGE.height) / PAGE.width} single={narrow} canNext={!atEnd} canPrev={!atStart} onTurn={pages.turn} />
+              <PageFlip flip={pages.flip} pw={pw} ph={(pw * PAGE.height) / PAGE.width} single={narrow} onDone={pages.endFlip} />
             </div>
             {!narrow && (
-              <button className="ui-icon-btn" aria-label="Next pages" disabled={atEnd} onClick={goNext} style={{ width: 48, height: 48, borderRadius: 999, border: "1px solid var(--line)", background: "var(--paper)" }}>
+              <button className="ui-icon-btn" aria-label="Next pages" disabled={atEnd} onClick={() => pages.turn("next")} style={{ width: 48, height: 48, borderRadius: 999, border: "1px solid var(--line)", background: "var(--paper)" }}>
                 <IconNext size={20} />
               </button>
             )}
           </div>
           {narrow && (
             <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-              <button className="ui-btn ui-btn-outline" aria-label="Previous page" disabled={atStart} onClick={goPrev}><IconPrev size={16} /> Back</button>
-              <button className="ui-btn ui-btn-primary" aria-label="Next page" disabled={atEnd} onClick={goNext}>Next page <IconNext size={16} /></button>
+              <button className="ui-btn ui-btn-outline" aria-label="Previous page" disabled={atStart} onClick={() => pages.turn("prev")}><IconPrev size={16} /> Back</button>
+              <button className="ui-btn ui-btn-primary" aria-label="Next page" disabled={atEnd} onClick={() => pages.turn("next")}>Next page <IconNext size={16} /></button>
             </div>
           )}
 
-          <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 28, flexWrap: "wrap", justifyContent: "center" }}>
+          {spreads.length > 1 && (
+            <p className="muted" style={{ margin: "14px 0 0", fontSize: 13, textAlign: "center" }}>{narrow ? "swipe the page to turn it" : PAGE_TURN_HINT}</p>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: narrow ? 18 : 22, flexWrap: "wrap", justifyContent: "center" }}>
             <div style={{ display: "flex", gap: 8 }} aria-label={`Spread ${index + 1} of ${spreads.length}`}>
               {spreads.map((s, i) => (
                 <span key={s.id} style={{ width: i === index ? 22 : 8, height: 8, borderRadius: 999, background: i === index ? "var(--pistachio-700)" : "#C9D3BE", transition: "width .2s" }} />

@@ -117,6 +117,28 @@ const check = (c, n, d) => (c ? pass(n, d) : fail(n, d));
       check(Math.abs(p.rotate - before) >= 5, "Rotation handle turns the photo and saves", `rotate ${before} -> ${p.rotate}`);
     } else fail("Rotation handle visible");
 
+    // ---- lock: a locked item can't be dragged or deleted until it's unlocked ----
+    await page.click('[role="toolbar"] button[aria-label="Lock"]');
+    await page.waitForTimeout(1200);
+    p = (await els(ids)).find((e) => e.id === ids.photo);
+    check(p.locked === true && (await page.locator('[data-testid="lock-badge"]').count()) === 1 && (await page.locator(".moveable-control >> visible=true").count()) === 0,
+      "Lock saves, shows a lock badge and hides the move handles", `locked=${p.locked}`);
+    const lb = await photo.boundingBox();
+    const lx = lb.x + lb.width / 2, ly = lb.y + lb.height / 2;
+    await page.mouse.move(lx, ly);
+    await page.mouse.down();
+    for (let i = 1; i <= 12; i++) await page.mouse.move(lx - i * 12, ly + i * 4);
+    await page.mouse.up();
+    await page.keyboard.press("Delete");
+    await page.waitForTimeout(1500);
+    const pl = (await els(ids)).find((e) => e.id === ids.photo);
+    check(pl.x === p.x && pl.y === p.y && pl.page === p.page && !pl.is_deleted, "A locked item doesn't move when dragged, and Delete leaves it alone", `x ${p.x} -> ${pl.x}`);
+    await shot("2b-locked");
+    await page.click('[role="toolbar"] button[aria-label="Unlock"]');
+    await page.waitForTimeout(1200);
+    p = (await els(ids)).find((e) => e.id === ids.photo);
+    check(p.locked === false && (await page.locator(".moveable-control >> visible=true").count()) > 0, "Unlock brings the move handles back");
+
     // ---- add a sticker from the tray, undo, redo ----
     await page.click('[role="tab"]:has-text("Stickers")');
     await page.click('button:has-text("Daisy")');
@@ -160,6 +182,30 @@ const check = (c, n, d) => (c ? pass(n, d) : fail(n, d));
     await page.waitForFunction(() => /Spread 2/.test(document.body.innerText), null, { timeout: 15000 });
     check(true, "New spread added and opened");
     await shot("4-new-spread");
+
+    // ---- turn pages like a book ----
+    const spreadNo = async () => Number((await page.locator("header").innerText()).match(/Spread (\d+)/)[1]);
+    const sb = await page.locator('[data-testid="spread"]').boundingBox();
+    // swipe the empty page to the right: back a page
+    await page.mouse.move(sb.x + sb.width * 0.3, sb.y + sb.height * 0.6);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) await page.mouse.move(sb.x + sb.width * 0.3 + i * 22, sb.y + sb.height * 0.6 + i);
+    await page.mouse.up();
+    await page.waitForTimeout(250);
+    await shot("4b-page-turning");
+    await page.waitForTimeout(900);
+    check((await spreadNo()) === 1, "Swiping the page to the right turns back a spread", `spread ${await spreadNo()}`);
+    // trackpad: scroll sideways for the next page
+    await page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2);
+    for (let i = 0; i < 4; i++) await page.mouse.wheel(60, 0);
+    await page.waitForTimeout(1000);
+    check((await spreadNo()) === 2, "Scrolling sideways turns to the next spread", `spread ${await spreadNo()}`);
+    await page.keyboard.press("ArrowLeft");
+    await page.waitForTimeout(1000);
+    check((await spreadNo()) === 1, "The left arrow key turns back");
+    await page.click('button[aria-label="Turn the page forward"]');
+    await page.waitForTimeout(1000);
+    check((await spreadNo()) === 2, "Clicking the folded page corner turns forward");
 
     // ---- timeline ----
     await page.goto(`${BASE}/timeline`);

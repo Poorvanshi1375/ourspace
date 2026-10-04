@@ -3,8 +3,9 @@ import React from "react";
 import { PAGE } from "../model";
 import ElementView from "../editor/ElementView";
 
-/* only = "left" | "right" shows a single page (phones); otherwise the whole spread */
-export default function BookSpread({ elements, pageWidth, pageNumber = 1, onOpenLetter, only = null }) {
+/* only = "left" | "right" shows a single page (phones); otherwise the whole spread.
+   ghost = a picture of the page for the turning sheet: no test ids, nothing to click */
+export default function BookSpread({ elements, pageWidth, pageNumber = 1, onOpenLetter, only = null, ghost = false }) {
   const pw = pageWidth;
   const ph = (pw * PAGE.height) / PAGE.width;
   const scale = pw / PAGE.width;
@@ -14,17 +15,17 @@ export default function BookSpread({ elements, pageWidth, pageNumber = 1, onOpen
   const offset = only === "right" ? pw : 0; // shift the right page to x = 0 when shown alone
 
   return (
-    <div data-testid="gift-spread" style={{ position: "relative", width: only ? pw : pw * 2, height: ph, overflow: only ? "hidden" : "visible", borderRadius: only ? 12 : 0 }}>
+    <div data-testid={ghost ? undefined : "gift-spread"} style={{ position: "relative", width: only ? pw : pw * 2, height: ph, overflow: only ? "hidden" : "visible", borderRadius: only ? 12 : 0 }}>
       {(!only || only === "left") && <div className="ui-page left" style={{ left: 0, width: pw, height: ph }} />}
       {(!only || only === "right") && <div className="ui-page right" style={{ left: only ? 0 : pw, width: pw, height: ph }} />}
       {sorted.map((el, i) => {
         const gx = (el.page === "right" ? pw : 0) + el.x * pw - offset;
-        const clickable = el.type === "letter";
+        const clickable = !ghost && el.type === "letter";
         return (
           <div
             key={el.id}
-            data-el={el.id}
-            data-type={el.type}
+            data-el={ghost ? undefined : el.id}
+            data-type={ghost ? undefined : el.type}
             onClick={clickable ? () => onOpenLetter?.(el) : undefined}
             role={clickable ? "button" : undefined}
             tabIndex={clickable ? 0 : undefined}
