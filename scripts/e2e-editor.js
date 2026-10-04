@@ -174,6 +174,22 @@ const check = (c, n, d) => (c ? pass(n, d) : fail(n, d));
     await page.click(`[data-entry="${ids.bookId}/${ids.spreadId}"] >> text=Open this spread`);
     await page.locator('[data-testid="spread"]').waitFor({ timeout: 15000 });
     pass("Timeline entry opens its spread in the editor");
+
+    // ---- retired screens redirect; chat lives on the new screens ----
+    await page.goto(`${BASE}/dashboard`);
+    await page.waitForURL("**/home", { timeout: 15000 });
+    await page.goto(`${BASE}/gallery`);
+    await page.waitForURL("**/timeline", { timeout: 15000 });
+    await page.goto(`${BASE}/notes`);
+    await page.waitForURL("**/letters", { timeout: 15000 });
+    pass("Old addresses (/dashboard, /gallery, /notes) open the new screens");
+
+    await page.click('button:has-text("Our chat")');
+    await page.locator('input[placeholder="Write something…"]').fill("qa hello from the new screens");
+    await page.keyboard.press("Enter");
+    await page.locator("text=qa hello from the new screens").waitFor({ timeout: 15000 });
+    await shot("6-chat");
+    pass("Our chat opens on the new screens and sends a message");
   } catch (e) {
     fail("Script error", e.message.split("\n")[0]);
     await shot("error").catch(() => {});

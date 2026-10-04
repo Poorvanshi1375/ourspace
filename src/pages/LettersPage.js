@@ -1,5 +1,6 @@
 // src/pages/LettersPage.js — letters as envelopes; sealed time capsules; write and read
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import * as M from "../model";
 import AppShell from "../ui/AppShell";
@@ -206,6 +207,19 @@ export default function LettersPage() {
       b();
     };
   }, [activeSpaceCode, user, loading]);
+
+  // ?open=<letterId> (old letter links) opens that letter once the lists have loaded
+  const [params, setParams] = useSearchParams();
+  const openId = params.get("open");
+  useEffect(() => {
+    if (!openId || shared === null || drafts === null) return;
+    const hit = [...shared, ...drafts].find((n) => n.id === openId);
+    if (hit) {
+      setTab(hit.is_shared ? "shared" : "drafts");
+      setReading(hit);
+    }
+    setParams({}, { replace: true });
+  }, [openId, shared, drafts, setParams]);
 
   const list = tab === "shared" ? shared : drafts;
   const sealedCount = useMemo(() => (shared || []).filter((n) => M.isSealed(n)).length, [shared]);

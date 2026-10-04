@@ -9,6 +9,9 @@
  * It only COPIES: memory_posts stay untouched (the old screens keep using them until
  * Phase 2 replaces those screens). A space that already has its migrated book is skipped,
  * so running it twice is safe; --force rebuilds those books (overwrites edits made since).
+ * --add-new: for books that already exist, copy ONLY memories that aren't in the book yet
+ * (new days get new spreads); existing elements and spreads are never touched, including
+ * ones deleted in the editor.
  *
  * Needs admin access: serviceAccountKey.json in the project root (git-ignored), or
  * GOOGLE_APPLICATION_CREDENTIALS. Delete/revoke the key afterwards.
@@ -16,6 +19,7 @@
  * Usage:
  *   node scripts/migrate-memories-to-books.js                 # dry run, all spaces
  *   node scripts/migrate-memories-to-books.js --space ABC123  # dry run, one space
+ *   node scripts/migrate-memories-to-books.js --add-new       # dry run: only memories added since
  *   node scripts/migrate-memories-to-books.js --yes           # write
  */
 
@@ -28,6 +32,7 @@ const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "ourspace-dev";
 const TIME_ZONE = process.env.MIGRATION_TZ || "Asia/Kolkata";
 const APPLY = process.argv.includes("--yes");
 const FORCE = process.argv.includes("--force");
+const ADD_NEW = process.argv.includes("--add-new");
 const ONLY_SPACE = (() => {
   const i = process.argv.indexOf("--space");
   return i > -1 ? process.argv[i + 1] : null;
@@ -109,19 +114,35 @@ async function migrateSpace(spaceDoc) {
   const code = spaceDoc.id;
   const bookRef = db.collection("books").doc(`memories-${code}`);
 
-  if ((await bookRef.get()).exists && !FORCE) {
-    console.log(`  ${code}: already migrated, skipped (use --force to rebuild)`);
+  const bookExists = (await bookRef.get()).exists;
+  if (bookExists && !FORCE && !ADD_NEW) {
+    console.log(`  ${code}: already migrated, skipped (--add-new copies only new memories)`);
     return { skipped: 1 };
   }
+  const onlyNew = bookExists && ADD_NEW && !FORCE;
 
   const postsSnap = await db
     .collection("memory_posts")
     .where("spaceCode", "==", code)
     .where("is_deleted", "==", false)
     .get();
-  const posts = postsSnap.docs
+  let posts = postsSnap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((p) => p.created_at?.toDate);
+
+  // --add-new: drop memories already copied (an element with the post's id exists in any spread)
+  if (onlyNew) {
+    const existing = new Set();
+    const spreads = await bookRef.collection("spreads").get();
+    for (const sp of spreads.docs) {
+      (await sp.ref.collection("elements").select().get()).docs.forEach((d) => existing.add(d.id));
+    }
+    posts = posts.filter((p) => !existing.has(p.id));
+    if (!posts.length) {
+      console.log(`  ${code}: nothing new since the last migration`);
+      return { skipped: 1 };
+    }
+  }
 
   if (!posts.length) {
     console.log(`  ${code}: no memories, nothing to do`);
@@ -140,7 +161,7 @@ async function migrateSpace(spaceDoc) {
   const earliest = posts.reduce((a, p) => (p.created_at.toMillis() < a.toMillis() ? p.created_at : a), posts[0].created_at);
   const writes = [];
 
-  writes.push([
+  if (!onlyNew) writes.push([
     bookRef,
     {
       spaceCode: code,
@@ -164,7 +185,8 @@ async function migrateSpace(spaceDoc) {
 
   for (const [key, dayPosts] of days) {
     const spreadRef = bookRef.collection("spreads").doc(`day-${key}`);
-    writes.push([
+    const spreadMissing = !onlyNew || !(await spreadRef.get()).exists;
+    if (spreadMissing) writes.push([
       spreadRef,
       {
         title: dayTitle(key),
@@ -183,13 +205,13 @@ async function migrateSpace(spaceDoc) {
 
   const types = posts.reduce((m, p) => ((m[p.type || "text"] = (m[p.type || "text"] || 0) + 1), m), {});
   console.log(
-    `  ${code}: book + ${days.size} spreads + ${posts.length} elements  (${Object.entries(types)
+    `  ${code}: ${onlyNew ? "NEW ONLY: " : "book + "}${days.size} day(s) + ${posts.length} elements  (${Object.entries(types)
       .map(([t, n]) => `${n} ${t}`)
       .join(", ")})`
   );
 
   if (APPLY) await commitInBatches(writes);
-  return { spreads: days.size, elements: posts.length, books: 1 };
+  return { spreads: days.size, elements: posts.length, books: onlyNew ? 0 : 1 };
 }
 
 (async () => {

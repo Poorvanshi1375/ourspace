@@ -42,14 +42,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ---------- Memories (scrapbook items) ----------
+    // ---------- Memories from the old scrapbook (retired) ----------
+    // Kept read-only: everything was copied into books; the new screens never write here.
     match /memory_posts/{id} {
       allow read: if isMember(resource.data.spaceCode);
-      allow create: if isMember(request.resource.data.spaceCode);
-      allow update: if isMember(resource.data.spaceCode)
-        && request.resource.data.spaceCode == resource.data.spaceCode;
-      // Deleting is a soft delete (is_deleted: true)
-      allow delete: if false;
+      allow create, update, delete: if false;
     }
 
     // ---------- Letters ----------

@@ -61,7 +61,8 @@ export default function SpreadEditorPage() {
     );
   }, [bookId]);
 
-  const spreadId = params.get("spread") || spreads?.[0]?.id || null;
+  const wanted = params.get("spread");
+  const spreadId = (wanted && spreads?.some((s) => s.id === wanted) ? wanted : spreads?.[0]?.id) || null;
   const spreadIndex = spreads ? spreads.findIndex((s) => s.id === spreadId) : -1;
   const spread = spreadIndex > -1 ? spreads[spreadIndex] : null;
 
@@ -502,7 +503,7 @@ export default function SpreadEditorPage() {
             <h2 className="font-title" style={{ margin: 0, fontSize: 30 }}>{preview.content?.title || "A letter"}</h2>
             <p className="font-hand" style={{ fontSize: 26, lineHeight: "34px", whiteSpace: "pre-wrap" }}>{preview.content?.text || "This letter's text lives in Letters."}</p>
             <div style={{ display: "flex", gap: 10 }}>
-              {preview.content?.noteId && <Link className="ui-btn ui-btn-outline" to={`/notes/${preview.content.noteId}`}>Open in Letters</Link>}
+              {preview.content?.noteId && <Link className="ui-btn ui-btn-outline" to={`/letters?open=${preview.content.noteId}`}>Open in Letters</Link>}
               <button className="ui-btn ui-btn-primary" onClick={() => setPreview(null)}>Close</button>
             </div>
           </div>

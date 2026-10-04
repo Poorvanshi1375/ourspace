@@ -1,6 +1,6 @@
 ---
 name: run-ourspace
-description: Launch the OurSpace React + Firebase app locally and drive it end-to-end in headless Chrome (sign up, create/join a space, scrapbook add/drag/rotate/delete, shared letters vs private drafts). Use to run the app or verify a change in the real UI.
+description: Launch the OurSpace React + Firebase app locally and drive it end-to-end in headless Chrome (sign up, create/join a space, books and the spread editor, sealed letters, gift links, timeline). Use to run the app or verify a change in the real UI.
 ---
 
 # Run and drive OurSpace
@@ -33,6 +33,8 @@ npm run e2e        # scripts/e2e-check.js — exits 1 if any check fails
 
 - Uses Playwright with the system Chrome (`channel: "chrome"`), so no browser download is
   needed. If Chrome is missing, install it or change the channel to `msedge`.
+- Old screens (dashboard, old scrapbook, gallery, /notes) are retired and redirect to /home,
+  /books, /timeline, /letters. Login lands on `/home`.
 - Creates two fresh accounts `qa.a.<ts>@example.com` / `qa.b.<ts>@example.com`
   (password `qa-test-123`), account A creates a space, B joins with the code.
 - Prints PASS/FAIL per check plus console errors; screenshots go to `e2e-output/`.
