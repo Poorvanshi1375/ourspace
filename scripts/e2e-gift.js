@@ -22,8 +22,14 @@ const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
 (async () => {
   const errors = [];
   const browser = await chromium.launch({ channel: "chrome", headless: true });
+  // RECIPIENT_VIEWPORT=390x844 runs the recipient on a phone-sized touch screen
+  const rv = (process.env.RECIPIENT_VIEWPORT || "").split("x").map(Number);
+  const phone = rv.length === 2 && rv[0] < 760;
   const mk = async (label) => {
-    const p = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
+    const opts = label === "recipient" && rv.length === 2
+      ? { viewport: { width: rv[0], height: rv[1] }, isMobile: phone, hasTouch: phone, deviceScaleFactor: phone ? 2 : 1 }
+      : { viewport: { width: 1440, height: 1000 } };
+    const p = await (await browser.newContext(opts)).newPage();
     p.on("console", (m) => m.type() === "error" && !/permission|insufficient/i.test(m.text()) && errors.push(`[${label}] ${m.text()}`));
     p.on("pageerror", (e) => errors.push(`[${label}] pageerror ${e.message}`));
     return p;
@@ -120,6 +126,14 @@ const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
     await r.waitForTimeout(800);
     pass("The book opens on its first spread with its photos");
     await shot(r, "5-reading");
+    if (phone) {
+      // phones show one page at a time: the letter is on the right-hand page
+      const noScroll = await r.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+      check(noScroll, "On a phone the page fits the screen (no sideways scrolling)");
+      await r.click('button[aria-label="Next page"]');
+      await r.locator('[data-type="letter"]').waitFor({ timeout: 10000 });
+      await shot(r, "5c-phone-right-page");
+    }
     await r.click('[data-type="letter"]');
     check((await r.locator('[role="dialog"][aria-label="Letter"] >> text=happy birthday, you!').count()) === 1, "Recipient can open a letter on the page");
     await r.click('[role="dialog"] button:has-text("Close")');
