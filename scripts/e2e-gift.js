@@ -127,8 +127,15 @@ const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
     await r.click('button:has-text("Love this page")');
     await r.fill("#gift-reply", "I cried at this one");
     await r.click('button:has-text("Stick it")');
-    await r.locator("text=sent ♡").waitFor({ timeout: 15000 });
-    pass("Recipient leaves a heart and a note without logging in");
+    await r.locator('[data-testid="page-notes"] >> text=I cried at this one').waitFor({ timeout: 15000 });
+    check((await r.locator('[data-testid="page-notes"] >> text=1 ♡').count()) === 1, "Recipient's heart and note appear stuck under the page");
+    await r.waitForTimeout(1500); // let the page scroll to the new note
+    await shot(r, "5b-note-stuck");
+    await r.reload();
+    await r.click('button[aria-label="Break the seal to open your gift"]');
+    await r.click('button:has-text("Open the book")');
+    await r.locator('[data-testid="page-notes"] >> text=I cried at this one').waitFor({ timeout: 15000 });
+    pass("The note is still on the page after reopening the gift");
 
     // ---- creator sees the replies ----
     await a.reload();

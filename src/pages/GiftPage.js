@@ -181,8 +181,10 @@ export default function GiftPage() {
   const [muted, setMuted] = useState(false);
   const [reply, setReply] = useState({ text: "", sent: false, busy: false, error: "" });
   const [hearted, setHearted] = useState({});
+  const [replies, setReplies] = useState([]);
   const [, tick] = useState(0);
-  const [width, setWidth] = useState(window.innerWidth);
+  const [view, setView] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const notesRef = useRef(null);
   const audio = useRef(null);
 
   const load = useCallback(() => {
@@ -192,8 +194,16 @@ export default function GiftPage() {
   }, [token]);
   useEffect(load, [load]);
 
+  // notes and hearts left on this book, shown stuck under each spread (live)
+  const bookIdForReplies = state.book?.id;
+  const canReply = !!state.book?.allowReplies && !state.locked;
   useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
+    if (!bookIdForReplies || !canReply) return;
+    return M.subscribeReplies(bookIdForReplies, setReplies, () => setReplies([]));
+  }, [bookIdForReplies, canReply]);
+
+  useEffect(() => {
+    const onResize = () => setView({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", onResize);
     const t = setInterval(() => tick((n) => n + 1), 30000); // countdown refresh
     return () => {
@@ -247,7 +257,8 @@ export default function GiftPage() {
     setStage("cover");
   };
 
-  const pw = Math.max(260, Math.min(560, (width - 200) / 2));
+  // the open book fits the window (room above for the title, below for the controls)
+  const pw = Math.max(260, Math.min(560, (view.w - 200) / 2, ((view.h - 260) * 620) / 820));
 
   return (
     <div className="ui-root" style={{ position: "relative", overflowX: "hidden" }}>
@@ -386,6 +397,8 @@ export default function GiftPage() {
                     try {
                       await M.addReply(book.id, { spreadId: spread.id, text: reply.text.trim(), name: to });
                       setReply({ text: "", sent: true, busy: false, error: "" });
+                      // show where it went: the note sticks just under the book
+                      setTimeout(() => notesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 350);
                     } catch {
                       setReply((r) => ({ ...r, busy: false, error: "Couldn't send. Try again?" }));
                     }
@@ -393,7 +406,7 @@ export default function GiftPage() {
                   style={{ display: "flex", alignItems: "center", gap: 10, background: "#E9F1DD", padding: "8px 8px 8px 18px", borderRadius: 6, transform: "rotate(-1deg)", boxShadow: "0 6px 14px rgba(43,48,38,.1)" }}
                 >
                   <label htmlFor="gift-reply" className="font-hand" style={{ fontSize: 22, fontWeight: 700, whiteSpace: "nowrap" }}>
-                    {reply.sent ? "sent ♡ — another?" : `a note for ${from || "them"}:`}
+                    {reply.sent ? "stuck ♡ write another?" : `a note for ${from || "them"}:`}
                   </label>
                   <input id="gift-reply" value={reply.text} maxLength={500} onChange={(e) => setReply((r) => ({ ...r, text: e.target.value, sent: false }))} placeholder="I cried at this one…" className="font-hand" style={{ width: 240, border: "none", background: "transparent", fontSize: 22, outline: "none", borderBottom: "1.5px dashed var(--pistachio-400)", padding: "4px 2px" }} />
                   <button type="submit" className="ui-btn ui-btn-primary" style={{ minHeight: 36, padding: "8px 16px" }} disabled={reply.busy}>Stick it</button>
@@ -402,6 +415,29 @@ export default function GiftPage() {
               </>
             )}
           </div>
+          {book.allowReplies && (() => {
+            const here = replies.filter((r) => r.spreadId === spread.id);
+            const notes = here.filter((r) => r.text);
+            const hearts = here.filter((r) => r.reaction === "heart").length;
+            if (!notes.length && !hearts) return null;
+            return (
+              <section ref={notesRef} aria-label="Notes stuck on this page" data-testid="page-notes" style={{ marginTop: 26, width: "100%", maxWidth: pw * 2, textAlign: "center" }}>
+                <div className="muted" style={{ fontSize: 11, letterSpacing: ".2em", fontWeight: 700 }}>
+                  STUCK ON THIS PAGE{hearts ? ` · ${hearts} ♡` : ""}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 18, justifyContent: "center", marginTop: 14 }}>
+                  {notes.map((r, i) => (
+                    <figure key={r.id} className="gift-note" style={{ margin: 0, position: "relative", width: 220, background: "#E9F1DD", padding: "20px 16px 12px", boxShadow: "0 8px 16px rgba(43,48,38,.12)", transform: `rotate(${[-3, 2, -1.5, 3][i % 4]}deg)`, textAlign: "left" }}>
+                      <span className="ui-tape solid" style={{ width: 70, left: 75, top: -10, height: 20 }} />
+                      <blockquote className="font-hand" style={{ margin: 0, fontSize: 24, lineHeight: 1.1, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{r.text}</blockquote>
+                      <figcaption className="font-hand" style={{ fontSize: 18, color: "var(--pistachio-800)", textAlign: "right", marginTop: 8 }}>— {r.name || to}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+                <p className="muted" style={{ fontSize: 12, margin: "12px 0 0" }}>{from ? `${from} sees these too.` : "The sender sees these too."}</p>
+              </section>
+            );
+          })()}
           <button onClick={() => { setStage("envelope"); setIndex(0); }} style={{ marginTop: 22, border: "none", background: "transparent", fontSize: 13, color: "var(--ink-muted)", cursor: "pointer", textDecoration: "underline" }}>
             Replay the opening
           </button>
@@ -421,6 +457,8 @@ export default function GiftPage() {
       <style>{`
         @keyframes giftTurn { from { opacity: 0; transform: perspective(1600px) rotateY(-12deg) translateX(30px); } to { opacity: 1; transform: none; } }
         .gift-turn { animation: giftTurn .55s ease both; }
+        @keyframes giftStick { from { opacity: 0; transform: translateY(-18px) rotate(-8deg) scale(1.06); } }
+        .gift-note { animation: giftStick .45s ease both; }
       `}</style>
     </div>
   );
