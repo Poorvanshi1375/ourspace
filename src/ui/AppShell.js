@@ -7,7 +7,7 @@ import "./ui.css";
 const NAV = [
   { to: "/home", label: "My Space" },
   { to: "/books", label: "Books" },
-  { to: "/notes", label: "Letters" },
+  { to: "/letters", label: "Letters" },
 ];
 
 export default function AppShell({ children }) {

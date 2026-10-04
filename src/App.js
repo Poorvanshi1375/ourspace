@@ -24,6 +24,7 @@ import NewMemoryPage from "./pages/NewMemoryPage";
 import UploadMemoryPage from "./pages/UploadMemoryPage";
 import BooksPage from "./pages/BooksPage";
 import MySpacePage from "./pages/MySpacePage";
+import LettersPage from "./pages/LettersPage";
 import SpreadEditorPage from "./pages/SpreadEditorPage";
 
 // ✅ NEW
@@ -206,6 +207,15 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MySpacePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/letters"
+            element={
+              <ProtectedRoute>
+                <LettersPage />
               </ProtectedRoute>
             }
           />

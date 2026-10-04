@@ -306,6 +306,56 @@ async function openDayFromDashboard(page) {
     const off = await probeAnon();
     check(off.gift === null || off.gift?.denied, "T10 disabled link no longer opens", JSON.stringify(off.gift));
     check(off.spreads?.denied === "permission-denied", "T10 disabled link can't read pages", JSON.stringify(off.spreads));
+
+    // ---------------- Phase 2: Letters page (sealed time capsules) ----------------
+    const tomorrow = new Date(Date.now() + 2 * 86400000);
+    const dateKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+    async function writeLetterUI(title, body, { share = true, seal = false } = {}) {
+      await a.click('button:has-text("Write a letter")');
+      const dlg = a.locator('[role="dialog"][aria-label="Write a letter"]');
+      await dlg.locator('input[placeholder="open when you feel lonely"]').fill(title);
+      await dlg.locator("textarea").fill(body);
+      const shareBox = dlg.locator('label:has-text("Share with my space") input');
+      if ((await shareBox.isChecked()) !== share) await shareBox.click();
+      if (share && seal) {
+        await dlg.locator('label:has-text("Seal it until") input').click();
+        await dlg.locator('input[type="date"]').fill(dateKey);
+      }
+      await dlg.locator("button.ui-btn-primary").click();
+      await dlg.waitFor({ state: "detached", timeout: 15000 });
+    }
+    await a.goto(`${BASE}/letters`);
+    await a.locator('h1:has-text("Letters")').waitFor({ timeout: 15000 });
+    await writeLetterUI("QA time capsule", "open this on your birthday", { seal: true });
+    await writeLetterUI("QA open letter", "you are my favourite person");
+    await writeLetterUI("QA new draft", "not ready yet", { share: false });
+    await a.click('[role="tab"]:has-text("Shared")');
+    const capsule = a.locator('[data-letter]', { hasText: "QA time capsule" });
+    await capsule.waitFor({ timeout: 15000 });
+    check((await capsule.locator("text=opens on").count()) === 1, "T11 sealed letter shows as a locked envelope with its opening date");
+    await shot(a, "t11-letters");
+    await capsule.click();
+    const ownText = await a.locator('[data-testid="letter-text"]').innerText({ timeout: 15000 }).catch(() => "");
+    check(ownText.includes("open this on your birthday"), "T11 the writer can read their own sealed letter", ownText);
+    await a.click('[role="dialog"] button:has-text("Close")');
+
+    await b.goto(`${BASE}/letters`);
+    const bCapsule = b.locator('[data-letter]', { hasText: "QA time capsule" });
+    await bCapsule.waitFor({ timeout: 15000 });
+    await bCapsule.click();
+    await b.locator('[role="dialog"] [data-testid="letter-text"], [role="dialog"] >> text=Come back then').first().waitFor({ timeout: 15000 });
+    const leakedCapsule = await b.locator('[data-testid="letter-text"]').count();
+    const lockedMsg = await b.locator("text=Come back then").count();
+    check(leakedCapsule === 0 && lockedMsg === 1, "T12 the friend can't open the sealed letter early", `leaked=${leakedCapsule} locked=${lockedMsg}`);
+    await shot(b, "t12-sealed-for-friend");
+    await b.click('[role="dialog"] button:has-text("Close")');
+    await b.locator('[data-letter]', { hasText: "QA open letter" }).click();
+    const openText = await b.locator('[data-testid="letter-text"]').innerText({ timeout: 15000 }).catch(() => "");
+    check(openText.includes("favourite person"), "T12 the friend reads the open letter", openText);
+    await b.click('[role="dialog"] button:has-text("Close")');
+    await b.click('[role="tab"]:has-text("My drafts")');
+    await b.waitForTimeout(1500);
+    check((await b.locator('[data-letter]', { hasText: "QA new draft" }).count()) === 0, "T12 the writer's draft stays private");
   } catch (e) {
     fail("Script error", e.message.split("\n")[0]);
   } finally {
