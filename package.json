@@ -24,7 +24,9 @@
     "e2e": "node scripts/e2e-check.js",
     "migrate:books": "node scripts/migrate-memories-to-books.js",
     "e2e:editor": "node scripts/e2e-editor.js",
-    "e2e:gift": "node scripts/e2e-gift.js"
+    "e2e:gift": "node scripts/e2e-gift.js",
+    "deploy": "react-scripts build && npx firebase-tools deploy --only hosting",
+    "smoke:prod": "node scripts/smoke-prod.js"
   },
   "eslintConfig": {
     "extends": [

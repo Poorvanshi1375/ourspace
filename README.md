@@ -7,6 +7,8 @@ Friends share a private **space**. Inside it they make **books** spread by sprea
 can stay sealed until a date, see every day they've kept on a timeline, and chat. A book can be
 sent as a **gift link** that opens like a real envelope, with no login needed.
 
+**Live:** https://ourspace-dev.web.app
+
 ## Status
 
 | Phase | What | State |
@@ -32,6 +34,16 @@ npm start                    # http://localhost:3000
 ```
 
 `.env.local` is git-ignored. Restart `npm start` after changing it.
+
+## Deploy
+
+```bash
+npm run deploy        # production build + Firebase Hosting (https://ourspace-dev.web.app)
+npm run smoke:prod    # checks the live site through the real UI, including a logged-out gift link
+```
+
+Hosting serves `build/` and sends every path to the app, so links like `/gift/<token>` work.
+The build reads `.env.local`, so deploy from a machine that has it.
 
 ## Firebase
 
