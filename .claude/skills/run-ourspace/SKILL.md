@@ -74,6 +74,12 @@ npm run cleanup:qa -- --yes   # delete
 Needs a service account key saved as `serviceAccountKey.json` in the project root
 (git-ignored). It only deletes spaces whose members are all QA accounts.
 
+## Production
+
+Live at https://ourspace-dev.web.app (Firebase Hosting). `npm run deploy` builds and deploys;
+`npm run smoke:prod` drives the live site through the UI only (no `window.__ourspace` in
+production builds). It leaves a QA account behind: clean up with `cleanup:qa`.
+
 ## Gotchas (all hit in practice)
 
 - **Drags need many small pointer moves.** interact.js ignores a 2-step move; use a loop
